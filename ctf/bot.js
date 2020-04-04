@@ -1,5 +1,4 @@
 
-
 function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.w = 32;
@@ -169,7 +168,7 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
     }
 
     this.avoid = function(team) {
-        let distThreshhold = 400;
+        let distThreshhold = 300;
         let minDistPlayer = this.findClosestPlayer(team);
         if(minDistPlayer.dist < distThreshhold && minDistPlayer.player != null) {
             let directions = minDistPlayer.player.getDirections();
@@ -201,7 +200,7 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
     this.update = function(g) {
         ACCELERATION = defaultACC;
         if(this.isCarrier) {
-            ACCELERATION = defaultACC/2;
+            ACCELERATION = ACCELERATION/2;
         }
         this.acc.x = 0; this.acc.y = 0;
         this.w = 32; this.h = 32;

@@ -6,8 +6,8 @@ canvas.height = 800;
 let g = canvas.getContext("2d");
 
 
-const defaultACC = 0.5
-const defaultFRIC = -0.05
+const defaultACC = 0.8
+const defaultFRIC = -0.1 //-0.05
 
 let ACCELERATION = defaultACC
 let FRICTION = defaultFRIC
@@ -209,7 +209,7 @@ function Player(x, y, color) {
     this.update = function(g) {
         ACCELERATION = defaultACC;
         if(this.isCarrier) {
-            ACCELERATION = defaultACC/2;
+            ACCELERATION = ACCELERATION/2;
         }
         this.acc.x = 0; this.acc.y = 0;
         this.w = 32; this.h = 32;
@@ -343,7 +343,7 @@ function Flag(base) {
     this.h = 25;
     this.team = base.getTeam();
     this.carrier = null;
-    this.fullTimer = 300;
+    this.fullTimer = 175;
     this.timer = this.fullTimer;
     this.depleting = false;
 
@@ -365,7 +365,7 @@ function Flag(base) {
             this.respawn();
         }
 
-        g.globalAlpha = this.timer/300;
+        g.globalAlpha = this.timer/this.fullTimer;
         g.fillStyle = "white";
         g.beginPath();
         g.arc(this.pos.x,this.pos.y,this.w/2+3,0,2*Math.PI,false);
@@ -565,7 +565,7 @@ let players = {
 let count = 0
 let redXPos = [0, 40, 80];
 let redYPos = 767;
-for(let i = 0; i < 1; i++) {
+for(let i = 0; i < 3; i++) {
     if(i != 0) {
         players.red.push(new Bot(redXPos[i%3], 767, "red", flags, bases, healingStations, count))
     } else {
@@ -575,7 +575,7 @@ for(let i = 0; i < 1; i++) {
 }
 let blueXPos = [1167, 1127, 1127-40];
 let blueYPos = [0, 0, 0];
-for(let i = 0; i < 1; i++) {
+for(let i = 1; i < 4; i++) {
     players.blue.push(new Bot(blueXPos[i%3], 0, "blue", flags, bases, healingStations, count))
     count++;
 }
