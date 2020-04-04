@@ -1,15 +1,9 @@
 
 
-function Bot(color, flags, bases, healingStations, ID) {
+function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.w = 32;
     this.h = 32;
-    let x = Math.random()*500+50;
-    let y = canvas.height-50-this.h;
-    if(color === "blue") {
-        x = canvas.width-Math.random()*500+50;
-        y = 50;
-    }
     this.spawnPos = {
         "x": x,
         "y": y
@@ -118,6 +112,15 @@ function Bot(color, flags, bases, healingStations, ID) {
         }
     }
 
+    this.pickUpAmmo = function() {
+        this.bulletsNum++;
+        if(this.bulletsNum > 3) {
+            this.bulletsNum = 3;
+            return false;
+        }
+        return true;
+    }
+
     this.findObject = function(flag) {
         this.leftIn = false;
         this.rightIn = false;
@@ -212,7 +215,7 @@ function Bot(color, flags, bases, healingStations, ID) {
             }
             if(this.checkFlagCarried(this.flags[this.team]) != null) {
                 let enemyFlagCarrier = this.checkFlagCarried(this.flags[this.team]);
-                let chance = Math.round(Math.random()*100+1);
+                let chance = Math.round(Math.random()*51+1);
                 console.log(chance)
                 this.findObject(enemyFlagCarrier);
                 if(chance === 50) {
@@ -221,7 +224,7 @@ function Bot(color, flags, bases, healingStations, ID) {
             }
             if(this.checkFlagCarried(this.flags[this.enemyTeam]) != null) {
                 let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
-                let chance = Math.round(Math.random()*100+1);
+                let chance = Math.round(Math.random()*51+1);
                 this.findObject(closestEnemy);
                 if(chance === 50) {
                     this.shoot(closestEnemy.getPos().x, closestEnemy.getPos().y)
@@ -231,7 +234,7 @@ function Bot(color, flags, bases, healingStations, ID) {
         if(this.isCarrier) {
             this.findObject(this.teamBase);
             let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
-            let chance = Math.round(Math.random()*100+1);
+            let chance = Math.round(Math.random()*51+1);
             if(chance === 50) {
                 this.shoot(closestEnemy.getPos().x, closestEnemy.getPos().y)
             }
@@ -284,6 +287,7 @@ function Bot(color, flags, bases, healingStations, ID) {
         }
 
         if(this.health <= 0) {
+            ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
             this.pos.x = this.spawnPos.x; 
             this.pos.y = this.spawnPos.y;
             this.health = this.fullHealth;

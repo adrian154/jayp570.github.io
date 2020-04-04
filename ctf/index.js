@@ -13,6 +13,8 @@ let ACCELERATION = defaultACC
 let FRICTION = defaultFRIC
 let MOMENTUMLOSS = -0.5
 
+let ammoDrops = [];
+
 
 
 function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
@@ -110,16 +112,10 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
 
 }
 
-function Player(color) {
+function Player(x, y, color) {
 
     this.w = 32;
     this.h = 32;
-    let x = Math.random()*500+50;
-    let y = canvas.height-50-this.h;
-    if(color === "blue") {
-        x = canvas.width-Math.random()*500+50;
-        y = 50;
-    }
     this.spawnPos = {
         "x": x,
         "y": y
@@ -201,6 +197,15 @@ function Player(color) {
         }
     }
 
+    this.pickUpAmmo = function() {
+        this.bulletsNum++;
+        if(this.bulletsNum > 3) {
+            this.bulletsNum = 3;
+            return false;
+        }
+        return true;
+    }
+
     this.update = function(g) {
         ACCELERATION = defaultACC;
         if(this.isCarrier) {
@@ -251,6 +256,7 @@ function Player(color) {
         }
 
         if(this.health <= 0) {
+            ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
             this.pos.x = this.spawnPos.x; 
             this.pos.y = this.spawnPos.y;
             this.health = this.fullHealth;
@@ -489,6 +495,45 @@ function HealingStation(x, y, color) {
 
 }
 
+function AmmoDrop(x, y) {
+
+    this.pos = {
+        "x": x,
+        "y": y
+    }
+    this.w = 10;
+    this.h = 10;
+
+    this.timer = 100;
+
+    this.update = function() {
+        g.fillStyle = "orange";
+        g.globalAlpha = this.timer/100;
+        g.beginPath();
+        g.arc(this.pos.x,this.pos.y,this.w/2,0,2*Math.PI,false);
+        g.fill();
+        this.timer--;
+        g.globalAlpha = 1.0;
+    }
+
+    this.getPos = function() {
+        return this.pos;
+    }
+
+    this.getW = function() {
+        return this.w;
+    }
+
+    this.getH = function() {
+        return this.h;
+    }
+
+    this.getTimer = function() {
+        return this.timer;
+    }
+
+}
+
 
 
 
@@ -518,12 +563,20 @@ let players = {
     "blue": []
 }
 let count = 0
-for(let i = 0; i < 3; i++) {
-    players.red.push(new Bot("red", flags, bases, healingStations, count))
+let redXPos = [0, 40, 80];
+let redYPos = 767;
+for(let i = 0; i < 1; i++) {
+    if(i != 0) {
+        players.red.push(new Bot(redXPos[i%3], 767, "red", flags, bases, healingStations, count))
+    } else {
+        players.player.push(new Player(redXPos[i%3], 767, "red"));
+    }
     count++;
 }
-for(let i = 0; i < 3; i++) {
-    players.blue.push(new Bot("blue", flags, bases, healingStations, count))
+let blueXPos = [1167, 1127, 1127-40];
+let blueYPos = [0, 0, 0];
+for(let i = 0; i < 1; i++) {
+    players.blue.push(new Bot(blueXPos[i%3], 0, "blue", flags, bases, healingStations, count))
     count++;
 }
 console.log(players.red)
@@ -583,6 +636,9 @@ function animate() {
 
     bases.red.update(g);
     bases.blue.update(g);
+    for(let i = 0; i < ammoDrops.length; i++) {
+        ammoDrops[i].update();
+    }
     flags.red.update(g);
     flags.blue.update(g);
 
@@ -668,6 +724,26 @@ function animate() {
                     }
                 }
             }
+        }
+    }
+
+    for(let i in players) {
+        for(let j = 0; j < players[i].length; j++) {
+            let player = players[i][j];
+            for(let k = 0; k < ammoDrops.length; k++) {
+                let ammoDrop = ammoDrops[k];
+                if(player.checkCollision(ammoDrop)) {
+                    if(player.pickUpAmmo()) {
+                        ammoDrops.splice(k,1);
+                    }
+                }
+            }
+        }
+    }
+
+    for(let i = 0; i < ammoDrops.length; i++) {
+        if(ammoDrops[i].getTimer() < 0) {
+            ammoDrops.splice(i,1);
         }
     }
 
