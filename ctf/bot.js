@@ -31,6 +31,8 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
     this.isCarrier = false;
     this.bullets = [];
     this.bulletsNum = 3;
+    this.fullDashTimer = 32;
+    this.dashTimer = 32;
 
     this.flags = flags;
     this.teamBase = bases[this.team];
@@ -47,6 +49,11 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         "blue": []
     }
     this.id = ID;
+
+    this.powerups = {};
+    for(let k in powerups) {
+        this.powerups.k = false;
+    }
 
     this.setPlayers = function(players) {
         for(let i in players) {
@@ -106,8 +113,36 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.shoot = function(mouseX,mouseY) {
         if(this.bulletsNum > 0) {
-            this.bullets.push(new Bullet(this.pos.x,this.pos.y,mouseX,mouseY,this.team,this.id));
+            let x = this.pos.x+this.w/2;
+            let y = this.pos.y+this.h/2;
+            this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+            if(this.powerups.shotgun) {
+                let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
+                let trshld = 100;
+                let offset = {
+                    one: {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                    },
+                    two: {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                    }
+                }
+                this.bullets.push(new Bullet(x, y, mouseX+offset.one.x, mouseY+offset.one.y, this.team, this.id));
+                this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
+            }
             this.bulletsNum--;
+        }
+    }
+
+    this.dash = function() {
+        if(this.dashTimer >= this.fullDashTimer && this.isCarrier === false) {
+            if(this.leftIn) {this.vel.x-=10}
+            if(this.rightIn) {this.vel.x+=10}
+            if(this.upIn) {this.vel.y-=10}
+            if(this.downIn) {this.vel.y+=10}
+            this.dashTimer = 0;
         }
     }
 
@@ -118,6 +153,13 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             return false;
         }
         return true;
+    }
+
+    this.pickUpPowerup = function(powerupName) {
+        for(let i in this.powerups) {
+            this.powerups[i] = false;
+        }
+        this.powerups[powerupName] = true;
     }
 
     this.findObject = function(flag) {
@@ -197,6 +239,28 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         return null;
     }
 
+    this.hasPowerup = function() {
+        for(let k in this.powerups) {
+            if(this.powerups[k]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    this.respawn = function() {
+        ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
+        this.pos.x = this.spawnPos.x; 
+        this.pos.y = this.spawnPos.y;
+        this.health = this.fullHealth;
+        this.bulletsNum = 3;
+        this.dashTimer = this.fullDashTimer;
+        this.healing = false;
+        for(let k in this.powerups) {
+            this.powerups[k] = false;
+        }
+    }
+
     this.update = function(g) {
         ACCELERATION = defaultACC;
         if(this.isCarrier) {
@@ -208,26 +272,31 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         //behavior
         
         if(this.isCarrier === false) {
+            let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
+            let shootChance = Math.round(Math.random()*51+1);
             this.findObject(this.flags[this.enemyTeam]);
             if(this.health < 25) {
                 this.healing = true;
             }
             if(this.checkFlagCarried(this.flags[this.team]) != null) {
                 let enemyFlagCarrier = this.checkFlagCarried(this.flags[this.team]);
-                let chance = Math.round(Math.random()*51+1);
-                console.log(chance)
                 this.findObject(enemyFlagCarrier);
-                if(chance === 50) {
+                if(shootChance === 50) {
                     this.shoot(enemyFlagCarrier.getPos().x, enemyFlagCarrier.getPos().y)
                 }
             }
             if(this.checkFlagCarried(this.flags[this.enemyTeam]) != null) {
-                let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
-                let chance = Math.round(Math.random()*51+1);
                 this.findObject(closestEnemy);
-                if(chance === 50) {
+                if(shootChance === 50) {
                     this.shoot(closestEnemy.getPos().x, closestEnemy.getPos().y)
                 }
+            }
+            let dashChance = Math.round(Math.random()*51+1);
+            if(dashChance === 50) {
+                this.dash();
+            }
+            if(shootChance === 50) {
+                this.shoot(closestEnemy.getPos().x, closestEnemy.getPos().y)
             }
         } 
         if(this.isCarrier) {
@@ -235,7 +304,7 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
             let chance = Math.round(Math.random()*51+1);
             if(chance === 50) {
-                this.shoot(closestEnemy.getPos().x, closestEnemy.getPos().y)
+                this.shoot(closestEnemy.getPos().x+this.w/2, closestEnemy.getPos().y+this.h/2)
             }
             this.avoid(this.enemyTeam);
         }
@@ -286,17 +355,22 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         }
 
         if(this.health <= 0) {
-            ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
-            this.pos.x = this.spawnPos.x; 
-            this.pos.y = this.spawnPos.y;
-            this.health = this.fullHealth;
-            this.bulletsNum = 3;
-            this.healing = false;
-            //this.isCarrier = false;
+            this.respawn();
         }
 
+        if(this.dashTimer < this.fullDashTimer) {
+            this.dashTimer+=0.5;
+        }
+
+        if(this.hasPowerup()) {
+            g.shadowBlur = 10;
+            g.shadowOffsetX = 0;
+            g.shadowOffsetY = 0;
+            g.shadowColor = "white";
+        }
         g.fillStyle = this.team;
         g.fillRect(this.pos.x,this.pos.y,this.w,this.h);
+        g.shadowBlur = 0;
         g.fillStyle = "red";
         g.fillRect(this.pos.x,this.pos.y-15,this.fullHealth/3,10);
         g.fillStyle = "green";
@@ -313,6 +387,8 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         g.textAlign = "center";
         g.font = "20px Tahoma";
         g.fillText(this.id,this.pos.x+this.w/2,this.pos.y+this.h/2+8);
+        g.fillStyle = "#62e3fc";
+        g.fillRect(this.pos.x-15,this.pos.y+(this.w-this.dashTimer),10,this.dashTimer)
     }
 
     this.getVel = function() {

@@ -1,6 +1,6 @@
 let canvas = document.querySelector("canvas");
 
-canvas.width = 1200;
+canvas.width = 1800;
 canvas.height = 800;
 
 let g = canvas.getContext("2d");
@@ -13,7 +13,12 @@ let ACCELERATION = defaultACC
 let FRICTION = defaultFRIC
 let MOMENTUMLOSS = -0.5
 
+const BULLETDAMAGE = 32;
 let ammoDrops = [];
+
+let powerups = {
+    "shotgun": new Powerup("shotgun")
+}
 
 
 
@@ -64,6 +69,12 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
             g.beginPath();
             g.arc(this.pos.x,this.pos.y,this.w/2,0,2*Math.PI,false);
             g.fill();
+            g.globalAlpha = 0.7;
+            g.fillStyle = this.team;
+            g.beginPath();
+            g.arc(this.pos.x,this.pos.y,this.w/2,0,2*Math.PI,false);
+            g.fill();
+            g.globalAlpha = 1.0;
         }
     }
 
@@ -143,8 +154,15 @@ function Player(x, y, color) {
     this.isCarrier = false;
     this.bullets = [];
     this.bulletsNum = 3;
+    this.fullDashTimer = 32;
+    this.dashTimer = 32;
 
     this.id = null;
+
+    this.powerups = {};
+    for(let k in powerups) {
+        this.powerups.k = false;
+    }
 
     this.setDirection = function(code,bool) {
         switch(code) {
@@ -192,8 +210,36 @@ function Player(x, y, color) {
 
     this.shoot = function(mouseX,mouseY) {
         if(this.bulletsNum > 0) {
-            this.bullets.push(new Bullet(this.pos.x,this.pos.y,mouseX,mouseY,this.team,this.id));
+            let x = this.pos.x+this.w/2;
+            let y = this.pos.y+this.h/2;
+            this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+            if(this.powerups.shotgun) {
+                let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
+                let trshld = 100;
+                let offset = {
+                    one: {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                    },
+                    two: {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                    }
+                }
+                this.bullets.push(new Bullet(x, y, mouseX+offset.one.x, mouseY+offset.one.y, this.team, this.id));
+                this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
+            }
             this.bulletsNum--;
+        }
+    }
+
+    this.dash = function() {
+        if(this.dashTimer >= this.fullDashTimer && this.isCarrier === false) {
+            if(this.leftIn) {this.vel.x-=10}
+            if(this.rightIn) {this.vel.x+=10}
+            if(this.upIn) {this.vel.y-=10}
+            if(this.downIn) {this.vel.y+=10}
+            this.dashTimer = 0;
         }
     }
 
@@ -204,6 +250,34 @@ function Player(x, y, color) {
             return false;
         }
         return true;
+    }
+
+    this.pickUpPowerup = function(powerupName) {
+        for(let i in this.powerups) {
+            this.powerups[i] = false;
+        }
+        this.powerups[powerupName] = true;
+    }
+
+    this.hasPowerup = function() {
+        for(let k in this.powerups) {
+            if(this.powerups[k]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    this.respawn = function() {
+        ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
+        this.pos.x = this.spawnPos.x; 
+        this.pos.y = this.spawnPos.y;
+        this.health = this.fullHealth;
+        this.bulletsNum = 3;
+        this.dashTimer = this.fullDashTimer;
+        for(let k in this.powerups) {
+            this.powerups[k] = false;
+        }
     }
 
     this.update = function(g) {
@@ -256,16 +330,22 @@ function Player(x, y, color) {
         }
 
         if(this.health <= 0) {
-            ammoDrops.push(new AmmoDrop(this.pos.x, this.pos.y));
-            this.pos.x = this.spawnPos.x; 
-            this.pos.y = this.spawnPos.y;
-            this.health = this.fullHealth;
-            this.bulletsNum = 3;
-            //this.isCarrier = false;
+            this.respawn();
         }
 
+        if(this.dashTimer < this.fullDashTimer) {
+            this.dashTimer+=0.5;
+        }
+
+        if(this.hasPowerup()) {
+            g.shadowBlur = 10;
+            g.shadowOffsetX = 0;
+            g.shadowOffsetY = 0;
+            g.shadowColor = "white";
+        }
         g.fillStyle = this.team;
         g.fillRect(this.pos.x,this.pos.y,this.w,this.h);
+        g.shadowBlur = 0;
         g.fillStyle = "red";
         g.fillRect(this.pos.x,this.pos.y-15,this.fullHealth/3,10);
         g.fillStyle = "green";
@@ -278,6 +358,9 @@ function Player(x, y, color) {
             g.fill();
             x = i*15;
         }
+        g.fillStyle = "#62e3fc";
+        g.fillRect(this.pos.x-15,this.pos.y+(this.w-this.dashTimer),10,this.dashTimer);
+        g.beginPath();
     }
 
     this.getVel = function() {
@@ -343,7 +426,7 @@ function Flag(base) {
     this.h = 25;
     this.team = base.getTeam();
     this.carrier = null;
-    this.fullTimer = 175;
+    this.fullTimer = 225;
     this.timer = this.fullTimer;
     this.depleting = false;
 
@@ -536,6 +619,7 @@ function AmmoDrop(x, y) {
 
 
 
+let activePowerup = powerups.shotgun;
 
 let bases = {
     "red": new Base(0, canvas.height/2-75, 150, 150, "red"),
@@ -573,7 +657,7 @@ for(let i = 0; i < 3; i++) {
     }
     count++;
 }
-let blueXPos = [1167, 1127, 1127-40];
+let blueXPos = [1767, 1727, 1727-40];
 let blueYPos = [0, 0, 0];
 for(let i = 1; i < 4; i++) {
     players.blue.push(new Bot(blueXPos[i%3], 0, "blue", flags, bases, healingStations, count))
@@ -589,19 +673,30 @@ for(let i = 0; i < players.blue.length; i++) {
 }
 //console.log(players.blue[0].getPlayers());
 
+let showControls = false;
+
 window.addEventListener('keydown', keyDownHandler, false);
 window.addEventListener('keyup', keyUpHandler, false);
 window.addEventListener("mousedown", mouseDownHandler, false);
 function keyDownHandler(e) {
     let code = e.keyCode;
     players.player[0].setDirection(code,true);
-    if(code === 32) {
+    if(code === 16) {
         players.player[0].takeDamage(1000);
+    }
+    if(code === 32) {
+        players.player[0].dash();
+    }
+    if(code === 70) {
+        showControls = true;
     }
 }
 function keyUpHandler(e) {
     let code = e.keyCode;
     players.player[0].setDirection(code,false);
+    if(code === 70) {
+        showControls = false;
+    }
 }
 function mouseDownHandler(e) {
     let rect = canvas.getBoundingClientRect();
@@ -624,9 +719,9 @@ function animate() {
     g.fillStyle = "red";
     g.textAlign = "center";
     g.font = "50px Tahoma";
-    g.fillText(score.red,canvas.width/2-40,canvas.height/2-25);
+    g.fillText(score.red,canvas.width/2-60,canvas.height/2-25);
     g.fillStyle = "blue";
-    g.fillText(score.blue,canvas.width/2+35,canvas.height/2-25);
+    g.fillText(score.blue,canvas.width/2+55,canvas.height/2-25);
 
     FRICTION = defaultFRIC
     ACCELERATION = defaultACC
@@ -639,6 +734,11 @@ function animate() {
     for(let i = 0; i < ammoDrops.length; i++) {
         ammoDrops[i].update();
     }
+
+    if(activePowerup != null) {
+        activePowerup.update(g);
+    }
+
     flags.red.update(g);
     flags.blue.update(g);
 
@@ -646,6 +746,24 @@ function animate() {
         for(let j = 0; j < players[i].length; j++) {
             players[i][j].update(g);
         }
+    }
+
+    if(showControls) {
+        g.globalAlpha = 0.5;
+        g.fillStyle = "black";
+        g.fillRect(50,50,canvas.width-100,canvas.height-100);
+        g.globalAlpha = 1.0;
+        g.fillStyle = "white";
+        g.textAlign = "center";
+        g.font = "30px Tahoma";
+        let verticalOffset = 160;
+        g.fillText("W - UP", canvas.width/2, verticalOffset+100);
+        g.fillText("A - LEFT", canvas.width/2, verticalOffset+140);
+        g.fillText("S - DOWN", canvas.width/2, verticalOffset+180);
+        g.fillText("D - RIGHT", canvas.width/2, verticalOffset+220);
+        g.fillText("LEFT CLICK - SHOOTS TOWARDS CURSOR", canvas.width/2, verticalOffset+260);
+        g.fillText("SPACE - DASH", canvas.width/2, verticalOffset+300);
+        g.fillText("F - CONTROLS", canvas.width/2, verticalOffset+340);
     }
 
 
@@ -696,7 +814,7 @@ function animate() {
             for(let i in healingStations) {
                 if(player.getTeam() === healingStations[i].getTeam()) {
                     if(player.checkCollision(healingStations[i])) {
-                        player.heal(1);
+                        player.heal(2);
                     }
                 }
             }
@@ -717,7 +835,7 @@ function animate() {
                 for(let l = 0; l < bullets[k].length; l++) {
                     let bullet = bullets[k][l];
                     if(player.checkCollision(bullet) && player.getID() != bullet.getID()) {
-                        player.takeDamage(25);
+                        player.takeDamage(BULLETDAMAGE);
                         player.vel.x+=bullet.getVel().x/2;
                         player.vel.y+=bullet.getVel().y/2;
                         bullet.setVisible(false);
@@ -736,6 +854,19 @@ function animate() {
                     if(player.pickUpAmmo()) {
                         ammoDrops.splice(k,1);
                     }
+                }
+            }
+        }
+    }
+
+    if(activePowerup != null) {
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                if(player.checkCollision(activePowerup)) {
+                    player.pickUpPowerup(activePowerup.name);
+                    activePowerup = null;
+                    break;
                 }
             }
         }
