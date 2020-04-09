@@ -11,9 +11,10 @@ const defaultFRIC = -0.1 //-0.05
 
 let ACCELERATION = defaultACC
 let FRICTION = defaultFRIC
-let MOMENTUMLOSS = -0.5
+let MOMENTUMLOSS = -1
 
-const BULLETDAMAGE = 32;
+const BULLETDAMAGE = 24;
+const RELOADTIME = 10;
 let ammoDrops = [];
 
 let powerups = {
@@ -71,6 +72,11 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
             g.fill();
             g.globalAlpha = 0.7;
             g.fillStyle = this.team;
+            g.beginPath();
+            g.arc(this.pos.x,this.pos.y,this.w/2,0,2*Math.PI,false);
+            g.fill();
+            g.globalAlpha = 0.4;
+            g.fillStyle = "white";
             g.beginPath();
             g.arc(this.pos.x,this.pos.y,this.w/2,0,2*Math.PI,false);
             g.fill();
@@ -149,15 +155,22 @@ function Player(x, y, color) {
     this.downIn = false;
 
     this.team = color;
+
     this.fullHealth = 100;
     this.health = this.fullHealth;
+
     this.isCarrier = false;
+
     this.bullets = [];
-    this.bulletsNum = 3;
+    this.shooting = false;
+    this.shootTimestamp = 0;
+
     this.fullDashTimer = 32;
     this.dashTimer = 32;
 
     this.id = null;
+
+    this.tick = 0;
 
     this.powerups = {};
     for(let k in powerups) {
@@ -180,6 +193,14 @@ function Player(x, y, color) {
 
     this.setVel = function(vel) {
         this.vel = vel;
+    }
+
+    this.setShooting = function(bool) {
+        this.shooting = bool;
+    }
+
+    this.setShootTimestamp = function(num) {
+        this.shootTimestamp = num;
     }
 
     this.checkCollision = function(object) {
@@ -209,27 +230,26 @@ function Player(x, y, color) {
     }
 
     this.shoot = function(mouseX,mouseY) {
-        if(this.bulletsNum > 0) {
-            let x = this.pos.x+this.w/2;
-            let y = this.pos.y+this.h/2;
-            this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
-            if(this.powerups.shotgun) {
-                let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
-                let trshld = 100;
-                let offset = {
-                    one: {
-                        x: Math.random()*(trshld-(-trshld))+(-trshld),
-                        y: Math.random()*(trshld-(-trshld))+(-trshld),
-                    },
-                    two: {
-                        x: Math.random()*(trshld-(-trshld))+(-trshld),
-                        y: Math.random()*(trshld-(-trshld))+(-trshld),
-                    }
+        let x = this.pos.x+this.w/2;
+        let y = this.pos.y+this.h/2;
+        this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+        if(this.powerups.shotgun) {
+            let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
+            let trshld = 100;
+            let offset = {
+                one: {
+                    x: Math.random()*(trshld-(-trshld))+(-trshld),
+                    y: Math.random()*(trshld-(-trshld))+(-trshld),
+                },
+                two: {
+                    x: Math.random()*(trshld-(-trshld))+(-trshld),
+                    y: Math.random()*(trshld-(-trshld))+(-trshld),
                 }
-                this.bullets.push(new Bullet(x, y, mouseX+offset.one.x, mouseY+offset.one.y, this.team, this.id));
-                this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
             }
-            this.bulletsNum--;
+            this.bullets.push(new Bullet(x, y, mouseX+offset.one.x, mouseY+offset.one.y, this.team, this.id));
+            this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
+            this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/2;
+            this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/2;
         }
     }
 
@@ -244,12 +264,7 @@ function Player(x, y, color) {
     }
 
     this.pickUpAmmo = function() {
-        this.bulletsNum++;
-        if(this.bulletsNum > 3) {
-            this.bulletsNum = 3;
-            return false;
-        }
-        return true;
+        
     }
 
     this.pickUpPowerup = function(powerupName) {
@@ -273,7 +288,6 @@ function Player(x, y, color) {
         this.pos.x = this.spawnPos.x; 
         this.pos.y = this.spawnPos.y;
         this.health = this.fullHealth;
-        this.bulletsNum = 3;
         this.dashTimer = this.fullDashTimer;
         for(let k in this.powerups) {
             this.powerups[k] = false;
@@ -351,16 +365,20 @@ function Player(x, y, color) {
         g.fillStyle = "green";
         g.fillRect(this.pos.x,this.pos.y-15,this.health/3,10);
         g.fillStyle = "orange";
+        /*
         let x = 0
         for(let i = 1; i <= this.bulletsNum; i++) {
             g.beginPath();
-            g.arc(this.pos.x+x,this.pos.y+10+this.h,5,0,2*Math.PI,false);
+            g.arc(this.pos.x+x,this.pos.y+10+this.h,2.5,0,2*Math.PI,false);
             g.fill();
-            x = i*15;
+            x = i*7.5;
         }
+        */
         g.fillStyle = "#62e3fc";
         g.fillRect(this.pos.x-15,this.pos.y+(this.w-this.dashTimer),10,this.dashTimer);
         g.beginPath();
+
+        this.tick++;
     }
 
     this.getVel = function() {
@@ -407,6 +425,10 @@ function Player(x, y, color) {
             "downIn": this.downIn
         }
         return directions;
+    }
+
+    this.getShooting = function() {
+        return this.shooting;
     }
 
 }
@@ -678,6 +700,8 @@ let showControls = false;
 window.addEventListener('keydown', keyDownHandler, false);
 window.addEventListener('keyup', keyUpHandler, false);
 window.addEventListener("mousedown", mouseDownHandler, false);
+window.addEventListener("mouseup", mouseUpHandler, false);
+window.addEventListener("mousemove", mouseMoveHandler, false);
 function keyDownHandler(e) {
     let code = e.keyCode;
     players.player[0].setDirection(code,true);
@@ -702,200 +726,253 @@ function mouseDownHandler(e) {
     let rect = canvas.getBoundingClientRect();
     let mouseX = event.clientX - rect.left;
     let mouseY = event.clientY - rect.top;
-    players.player[0].shoot(mouseX,mouseY);
+    players.player[0].setShooting(true);
+}
+function mouseUpHandler(e) {
+    let rect = canvas.getBoundingClientRect();
+    let mouseX = event.clientX - rect.left;
+    let mouseY = event.clientY - rect.top;
+    players.player[0].setShooting(false);
+}
+
+let playerShootTarget = {
+    "x": null,
+    "y": null
+}
+
+function mouseMoveHandler(e) {
+    let rect = canvas.getBoundingClientRect();
+    let mouseX = event.clientX - rect.left;
+    let mouseY = event.clientY - rect.top;
+    playerShootTarget.x = mouseX;
+    playerShootTarget.y = mouseY;
 }
 
 
+let win = false;
+let winningTeam = null;
+let winScreenTick = 0;
 
 function animate() {
 
     requestAnimationFrame(animate);
 
-    g.clearRect(0,0,canvas.width,canvas.height);
+    if(win === false) {
 
-    g.fillStyle = "yellow";
-    g.fillRect((canvas.width/2)-5,0,5,canvas.height);
+        g.clearRect(0,0,canvas.width,canvas.height);
 
-    g.fillStyle = "red";
-    g.textAlign = "center";
-    g.font = "50px Tahoma";
-    g.fillText(score.red,canvas.width/2-60,canvas.height/2-25);
-    g.fillStyle = "blue";
-    g.fillText(score.blue,canvas.width/2+55,canvas.height/2-25);
-
-    FRICTION = defaultFRIC
-    ACCELERATION = defaultACC
-
-    healingStations.red.update(g);
-    healingStations.blue.update(g);
-
-    bases.red.update(g);
-    bases.blue.update(g);
-    for(let i = 0; i < ammoDrops.length; i++) {
-        ammoDrops[i].update();
-    }
-
-    if(activePowerup != null) {
-        activePowerup.update(g);
-    }
-
-    flags.red.update(g);
-    flags.blue.update(g);
-
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            players[i][j].update(g);
+        for(let i in score) {
+            if(score[i] >= 5) {
+                winningTeam = i;
+                win = true;
+            }
         }
-    }
 
-    if(showControls) {
-        g.globalAlpha = 0.5;
-        g.fillStyle = "black";
-        g.fillRect(50,50,canvas.width-100,canvas.height-100);
-        g.globalAlpha = 1.0;
-        g.fillStyle = "white";
+        g.fillStyle = "yellow";
+        g.fillRect((canvas.width/2)-5,0,5,canvas.height);
+
+        g.fillStyle = "red";
         g.textAlign = "center";
-        g.font = "30px Tahoma";
-        let verticalOffset = 160;
-        g.fillText("W - UP", canvas.width/2, verticalOffset+100);
-        g.fillText("A - LEFT", canvas.width/2, verticalOffset+140);
-        g.fillText("S - DOWN", canvas.width/2, verticalOffset+180);
-        g.fillText("D - RIGHT", canvas.width/2, verticalOffset+220);
-        g.fillText("LEFT CLICK - SHOOTS TOWARDS CURSOR", canvas.width/2, verticalOffset+260);
-        g.fillText("SPACE - DASH", canvas.width/2, verticalOffset+300);
-        g.fillText("F - CONTROLS", canvas.width/2, verticalOffset+340);
-    }
+        g.font = "50px Tahoma";
+        g.fillText(score.red,canvas.width/2-60,canvas.height/2-25);
+        g.fillStyle = "blue";
+        g.fillText(score.blue,canvas.width/2+55,canvas.height/2-25);
 
+        FRICTION = defaultFRIC
+        ACCELERATION = defaultACC
 
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            for(let base in bases) {
-                if(player.getTeam() === bases[base].getTeam()) {
-                    if(player.checkCollision(bases[base])) {
-                        player.takeDamage(1);
-                        if(player.getIsCarrier() == true) {
-                            let playersTeam = player.getTeam();
-                            let enemyTeam;
-                            for(let k in flags) {
-                                if(k != playersTeam) {
-                                    enemyTeam = k;
-                                }
-                            }
-                            score[playersTeam]+=1;
-                            flags[enemyTeam].respawn();
+        healingStations.red.update(g);
+        healingStations.blue.update(g);
 
-                        }
-                        break;
-                    }
-                }
+        bases.red.update(g);
+        bases.blue.update(g);
+        for(let i = 0; i < ammoDrops.length; i++) {
+            ammoDrops[i].update();
+        }
+
+        if(activePowerup != null) {
+            activePowerup.update(g);
+        }
+
+        flags.red.update(g);
+        flags.blue.update(g);
+
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                players[i][j].update(g);
             }
         }
-    }
 
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            for(let flag in flags) {
-                if(player.checkCollision(flags[flag]) && player.getHealth() > 0 &&
-                flags[flag].getCarrier() === null) {
-                    if(player.getTeam() != flags[flag].getTeam()) {
-                        flags[flag].setCarrier(player);
-                        break;
-                   }
-                }
-            }
+        if(showControls) {
+            g.globalAlpha = 0.5;
+            g.fillStyle = "black";
+            g.fillRect(50,50,canvas.width-100,canvas.height-100);
+            g.globalAlpha = 1.0;
+            g.fillStyle = "white";
+            g.textAlign = "center";
+            g.font = "30px Tahoma";
+            let verticalOffset = 160;
+            g.fillText("W - UP", canvas.width/2, verticalOffset+100);
+            g.fillText("A - LEFT", canvas.width/2, verticalOffset+140);
+            g.fillText("S - DOWN", canvas.width/2, verticalOffset+180);
+            g.fillText("D - RIGHT", canvas.width/2, verticalOffset+220);
+            g.fillText("LEFT CLICK - SHOOTS TOWARDS CURSOR", canvas.width/2, verticalOffset+260);
+            g.fillText("SPACE - DASH", canvas.width/2, verticalOffset+300);
+            g.fillText("F - CONTROLS", canvas.width/2, verticalOffset+340);
         }
-    }
 
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            for(let i in healingStations) {
-                if(player.getTeam() === healingStations[i].getTeam()) {
-                    if(player.checkCollision(healingStations[i])) {
-                        player.heal(2);
-                    }
-                }
-            }
-        }
-    }
 
-    bullets = [];
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            bullets.push(player.getBullets())
-        }
-    }
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            for(let k = 0; k < bullets.length; k++) {
-                for(let l = 0; l < bullets[k].length; l++) {
-                    let bullet = bullets[k][l];
-                    if(player.checkCollision(bullet) && player.getID() != bullet.getID()) {
-                        player.takeDamage(BULLETDAMAGE);
-                        player.vel.x+=bullet.getVel().x/2;
-                        player.vel.y+=bullet.getVel().y/2;
-                        bullet.setVisible(false);
-                    }
-                }
-            }
-        }
-    }
-
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player = players[i][j];
-            for(let k = 0; k < ammoDrops.length; k++) {
-                let ammoDrop = ammoDrops[k];
-                if(player.checkCollision(ammoDrop)) {
-                    if(player.pickUpAmmo()) {
-                        ammoDrops.splice(k,1);
-                    }
-                }
-            }
-        }
-    }
-
-    if(activePowerup != null) {
         for(let i in players) {
             for(let j = 0; j < players[i].length; j++) {
                 let player = players[i][j];
-                if(player.checkCollision(activePowerup)) {
-                    player.pickUpPowerup(activePowerup.name);
-                    activePowerup = null;
-                    break;
-                }
-            }
-        }
-    }
+                for(let base in bases) {
+                    if(player.getTeam() === bases[base].getTeam()) {
+                        if(player.checkCollision(bases[base])) {
+                            player.takeDamage(1);
+                            if(player.getIsCarrier() == true) {
+                                let playersTeam = player.getTeam();
+                                let enemyTeam;
+                                for(let k in flags) {
+                                    if(k != playersTeam) {
+                                        enemyTeam = k;
+                                    }
+                                }
+                                score[playersTeam]+=1;
+                                flags[enemyTeam].respawn();
 
-    for(let i = 0; i < ammoDrops.length; i++) {
-        if(ammoDrops[i].getTimer() < 0) {
-            ammoDrops.splice(i,1);
-        }
-    }
-
-    for(let i in players) {
-        for(let j = 0; j < players[i].length; j++) {
-            let player1 = players[i][j];
-            for(let k in players) {
-                for(let l = 0; l < players[k].length; l++) {
-                    let player2 = players[k][l];
-                    if(player1.checkCollision(player2) && player1.getID() != player2.getID()) {
-                        if(player1.getTeam() != player2.getTeam()) {
-                            player2.vel.x = player1.vel.x*-1.01;
-                            player2.vel.y = player1.vel.y*-1.01;
-                            player1.vel.x*=-1.01;
-                            player1.vel.y*=-1.01;
-                            player2.takeDamage(Math.random()*5+1);
+                            }
+                            break;
                         }
                     }
                 }
             }
         }
+
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                for(let flag in flags) {
+                    if(player.checkCollision(flags[flag]) && player.getHealth() > 0 &&
+                    flags[flag].getCarrier() === null) {
+                        if(player.getTeam() != flags[flag].getTeam()) {
+                            flags[flag].setCarrier(player);
+                            break;
+                    }
+                    }
+                }
+            }
+        }
+
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                for(let i in healingStations) {
+                    if(player.getTeam() === healingStations[i].getTeam()) {
+                        if(player.checkCollision(healingStations[i])) {
+                            player.heal(2);
+                        }
+                    }
+                }
+            }
+        }
+
+        bullets = [];
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                bullets.push(player.getBullets())
+            }
+        }
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                for(let k = 0; k < bullets.length; k++) {
+                    for(let l = 0; l < bullets[k].length; l++) {
+                        let bullet = bullets[k][l];
+                        if(player.checkCollision(bullet) && player.getID() != bullet.getID() && player.getTeam() != bullet.getTeam()) {
+                            player.takeDamage(BULLETDAMAGE);
+                            player.vel.x+=bullet.getVel().x/2;
+                            player.vel.y+=bullet.getVel().y/2;
+                            bullet.setVisible(false);
+                        }
+                    }
+                }
+            }
+        }
+
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                for(let k = 0; k < ammoDrops.length; k++) {
+                    let ammoDrop = ammoDrops[k];
+                    if(player.checkCollision(ammoDrop)) {
+                        if(player.pickUpAmmo()) {
+                            ammoDrops.splice(k,1);
+                        }
+                    }
+                }
+            }
+        }
+
+        if(activePowerup != null) {
+            for(let i in players) {
+                for(let j = 0; j < players[i].length; j++) {
+                    let player = players[i][j];
+                    if(player.checkCollision(activePowerup)) {
+                        player.pickUpPowerup(activePowerup.name);
+                        activePowerup = null;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for(let i = 0; i < ammoDrops.length; i++) {
+            if(ammoDrops[i].getTimer() < 0) {
+                ammoDrops.splice(i,1);
+            }
+        }
+
+        if(players.player[0].getShooting()) {
+            let yourPlayer = players.player[0];
+            if(yourPlayer.shootTimestamp+RELOADTIME <= yourPlayer.tick) {
+                players.player[0].shoot(playerShootTarget.x, playerShootTarget.y);
+                yourPlayer.shootTimestamp = yourPlayer.tick;
+            }
+        }
+
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player1 = players[i][j];
+                for(let k in players) {
+                    for(let l = 0; l < players[k].length; l++) {
+                        let player2 = players[k][l];
+                        if(player1.checkCollision(player2) && player1.getID() != player2.getID()) {
+                            if(player1.getTeam() != player2.getTeam()) {
+                                player2.vel.x = player1.vel.x*-1.01;
+                                player2.vel.y = player1.vel.y*-1.01;
+                                player1.vel.x*=-1.01;
+                                player1.vel.y*=-1.01;
+                                player2.takeDamage(Math.random()*5+1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if(win) {
+        g.globalAlpha = winScreenTick/500;
+        g.fillStyle = "black";
+        g.fillRect(0,0,canvas.width,canvas.height);
+        if(winScreenTick/500 > 0.2) {
+            g.globalAlpha = 1.0;
+            g.fillStyle = "white";
+            g.textAlign = "center";
+            g.font = "60px Tahoma";
+            g.fillText(winningTeam.toUpperCase()+" WINS", canvas.width/2, canvas.height/2);
+        }
+        winScreenTick++;
     }
 }
 
