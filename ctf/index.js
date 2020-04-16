@@ -1,20 +1,20 @@
 let canvas = document.querySelector("canvas");
 
-canvas.width = 2400;
+canvas.width = 1800;
 canvas.height = 800;
 
 function changeResolution() {
-    if(canvas.width === 1500) {
+    if(canvas.width === 1800) {
         canvas.width = 2400;
     } else if(canvas.width === 2400) {
-        canvas.width = 1500
+        canvas.width = 1800
     }
 }
 
 let g = canvas.getContext("2d");
 
 
-const defaultACC = 0.8
+const defaultACC = 0.9
 const defaultFRIC = -0.1 //-0.05
 
 let ACCELERATION = defaultACC
@@ -22,12 +22,13 @@ let FRICTION = defaultFRIC
 let MOMENTUMLOSS = -1
 
 const BULLETDAMAGE = 24;
-const RELOADTIME = 8;
+const RELOADTIME = 12;
 let ammoDrops = [];
 
 let powerups = {
     "shotgun": new Powerup("shotgun"),
-    "laser": new Powerup("laser")
+    "laser": new Powerup("laser"),
+    "chaingun": new Powerup("chaingun")
 }
 
 
@@ -56,8 +57,8 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
     this.vel.x*=20;
     this.vel.y*=20;
     this.visible = true;
-    this.w = 8;
-    this.h = 8;
+    this.w = 7;
+    this.h = 7;
 
     this.team = color;
     this.id = id;
@@ -138,31 +139,6 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
 
 }
 
-function Laser(playerX, playerY, targetX, targetY, id, color) {
-
-    this.playerPos = {
-        "x": playerX,
-        "y": playerY
-    }
-    this.targetPos = {
-        "x": targetX,
-        "y": targetY
-    }
-
-    this.team = color;
-    this.id = id;
-
-    this.update = function() {
-        context.beginPath();
-        context.strokeStyle = 'white';
-        context.moveTo(this.playerPos.x, this.playerPos.y);
-        context.lineTo(this.targetPos.x, this.targetPos.y);
-        context.lineWidth = 3;
-        context.stroke();
-    }
-
-}
-
 function Player(x, y, color) {
 
     this.w = 32;
@@ -213,6 +189,9 @@ function Player(x, y, color) {
         this.powerups[k] = false;
     }
 
+    this.indicatorImage = new Image();
+    this.indicatorImage.src = "images/indicator.png";
+
     this.setDirection = function(code,bool) {
         switch(code) {
             case 65: this.leftIn = bool; break;
@@ -241,6 +220,10 @@ function Player(x, y, color) {
 
     this.setLaser = function(laser) {
         this.laser = laser;
+    }
+
+    this.setReloadTime = function(num) {
+        this.reloadTime = num;
     }
 
     this.checkCollision = function(object) {
@@ -287,7 +270,6 @@ function Player(x, y, color) {
             this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
         }
         if(this.powerups.shotgun) {
-            let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
             let trshld = 100;
             let offset = {
                 one: {
@@ -303,6 +285,23 @@ function Player(x, y, color) {
             this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
             this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/2;
             this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/2;
+        }
+        if(this.powerups.chaingun) {
+            let trshld = 20;
+            offset = [];
+            for(let i = 0; i < 4; i++) {
+                offset.push(
+                     {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                     }
+                );
+            }
+            for(let i = 0; i < offset.length; i++) {
+                this.bullets.push(new Bullet(x+offset[i].x, y+offset[i].y, mouseX+offset[i].x, mouseY+offset[i].y, this.team, this.id));
+            }
+            this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/3;
+            this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/3;
         }
     }
 
@@ -321,8 +320,8 @@ function Player(x, y, color) {
     }
 
     this.pickUpPowerup = function(powerupName) {
-        for(let i in this.powerups) {
-            this.powerups[i] = false;
+        for(let k in this.powerups) {
+            this.powerups[k] = false;
         }
         this.powerups[powerupName] = true;
     }
@@ -387,6 +386,10 @@ function Player(x, y, color) {
             this.vel.y*=MOMENTUMLOSS;
         }
 
+
+        if(!this.shooting && this.powerups.chaingun) {
+            this.reloadTime = RELOADTIME;
+        }
         for(let i = 0; i < this.bullets.length; i++) {
             this.bullets[i].update();
         }
@@ -410,6 +413,7 @@ function Player(x, y, color) {
             g.shadowOffsetY = 0;
             g.shadowColor = "white";
         }
+        g.drawImage(this.indicatorImage,this.pos.x,this.pos.y-this.h-10);
         g.fillStyle = this.team;
         g.fillRect(this.pos.x,this.pos.y,this.w,this.h);
         g.shadowBlur = 0;
@@ -488,7 +492,7 @@ function Player(x, y, color) {
         return this.laser;
     }
 
-    this.getreloadTime = function() {
+    this.getReloadTime = function() {
         return this.reloadTime;
     }
 
@@ -745,7 +749,7 @@ function AmmoDrop(x, y) {
 
 
 
-let activePowerup = powerups.laser;
+let activePowerup = powerups.chaingun;
 
 let bases = {
     "red": new Base(150, 150, "red"),
@@ -775,7 +779,7 @@ let players = {
 let count = 0
 let redXPos = [0, 40, 80];
 let redYPos = 767;
-for(let i = 0; i < 1; i++) {
+for(let i = 0; i < 2; i++) {
     if(i != 0) {
         players.red.push(new Bot(redXPos[i%3], 767, "red", flags, bases, healingStations, count))
     } else {
@@ -783,9 +787,9 @@ for(let i = 0; i < 1; i++) {
     }
     count++;
 }
-let blueXPos = [1767, 1727, 1727-40];
+let blueXPos = [canvas.width-33, canvas.width-73, canvas.width-40-73];
 let blueYPos = [0, 0, 0];
-for(let i = 1; i < 2; i++) {
+for(let i = 1; i < 3; i++) {
     players.blue.push(new Bot(blueXPos[i%3], 0, "blue", flags, bases, healingStations, count))
     count++;
 }
@@ -896,17 +900,28 @@ function animate() {
 
         if(activePowerup != null) {
             activePowerup.update(g);
+        } 
+        if(activePowerup === null) {
+            let powerupKeys = Object.keys(powerups);
+            let choice = Math.floor(Math.random()*powerupKeys.length);
+            activePowerup = powerups[powerupKeys[choice]];
         }
 
         flags.red.update(g);
         flags.blue.update(g);
 
+        if(!players.player[0].powerups.chaingun) {
+            players.player[0].setReloadTime(RELOADTIME);
+        }
         if(players.player[0].getShooting()) {
             let yourPlayer = players.player[0];
             if(yourPlayer.powerups.laser === false) {
-                if(yourPlayer.shootTimestamp+yourPlayer.getreloadTime() <= yourPlayer.tick) {
+                if(yourPlayer.shootTimestamp+yourPlayer.getReloadTime() <= yourPlayer.tick) {
                     players.player[0].shoot(playerShootTarget.x, playerShootTarget.y);
                     yourPlayer.shootTimestamp = yourPlayer.tick;
+                    if(players.player[0].powerups.chaingun) {
+                        players.player[0].setReloadTime(players.player[0].getReloadTime()/1.04);
+                    }
                 }
             } else {
                 g.beginPath();
@@ -1140,7 +1155,6 @@ function animate() {
                                 player2.vel.y = player1.vel.y*-1.01;
                                 player1.vel.x*=-1.01;
                                 player1.vel.y*=-1.01;
-                                player2.takeDamage(Math.random()*5+1);
                             }
                         }
                     }

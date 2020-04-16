@@ -96,6 +96,10 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         this.laser = laser;
     }
 
+    this.setReloadTime = function(num) {
+        this.reloadTime = num;
+    }
+
     this.checkCollision = function(object) {
         let bX = object.getPos().x;
         let bY = object.getPos().y;
@@ -137,9 +141,10 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
     this.shoot = function(mouseX,mouseY) {
         let x = this.pos.x+this.w/2;
         let y = this.pos.y+this.h/2;
-        this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+        if(this.powerups.laser === false) {
+            this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+        }
         if(this.powerups.shotgun) {
-            let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
             let trshld = 100;
             let offset = {
                 one: {
@@ -155,6 +160,23 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             this.bullets.push(new Bullet(x, y, mouseX+offset.two.x, mouseY+offset.two.y, this.team, this.id));
             this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/2;
             this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/2;
+        }
+        if(this.powerups.chaingun) {
+            let trshld = 20;
+            offset = [];
+            for(let i = 0; i < 4; i++) {
+                offset.push(
+                     {
+                        x: Math.random()*(trshld-(-trshld))+(-trshld),
+                        y: Math.random()*(trshld-(-trshld))+(-trshld),
+                     }
+                );
+            }
+            for(let i = 0; i < offset.length; i++) {
+                this.bullets.push(new Bullet(x+offset[i].x, y+offset[i].y, mouseX+offset[i].x, mouseY+offset[i].y, this.team, this.id));
+            }
+            this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/3;
+            this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/3;
         }
     }
 
@@ -226,13 +248,6 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.pickUpAmmo = function() {
         
-    }
-
-    this.pickUpPowerup = function(powerupName) {
-        for(let i in this.powerups) {
-            this.powerups[i] = false;
-        }
-        this.powerups[powerupName] = true;
     }
 
     this.findObject = function(flag) {
@@ -312,6 +327,13 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         return null;
     }
 
+    this.pickUpPowerup = function(powerupName) {
+        for(let k in this.powerups) {
+            this.powerups[k] = false;
+        }
+        this.powerups[powerupName] = true;
+    }
+
     this.hasPowerup = function() {
         for(let k in this.powerups) {
             if(this.powerups[k]) {
@@ -346,7 +368,7 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
 
         //behavior
         let shootingTarget = {"x": null, "y": null};       
-        let shootChance = Math.round(Math.random()*51+1); 
+        let shootChance = Math.round(Math.random()*100+1); 
         if(this.isCarrier === false) {
             let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
             shootingTarget.x = closestEnemy.getPos().x+closestEnemy.getW()/2;
@@ -387,11 +409,17 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         if(this.healing) {
             this.findObject(this.healingStations[this.team]);
         }
+        if(!this.powerups.chaingun) {
+            this.setReloadTime(RELOADTIME);
+        }
         if(this.shooting) {
             if(this.powerups.laser === false) {
                 if(this.shootTimestamp+this.reloadTime <= this.tick) {
                     this.shoot(shootingTarget.x, shootingTarget.y);
                     this.shootTimestamp = this.tick;
+                    if(this.powerups.chaingun) {
+                        this.setReloadTime(this.reloadTime/1.04);
+                    }
                 }
             } else {
                 this.fireLaser(shootingTarget.x, shootingTarget.y);
@@ -431,6 +459,10 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             this.vel.y*=MOMENTUMLOSS;
         }
 
+
+        if(!this.shooting && this.powerups.chaingun) {
+            this.reloadTime = RELOADTIME;
+        }
         for(let i = 0; i < this.bullets.length; i++) {
             this.bullets[i].update();
         }
@@ -533,6 +565,10 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.getLaser = function() {
         return this.laser;
+    }
+
+    this.getReloadTime = function() {
+        return this.reloadTime;
     }
 
 }
