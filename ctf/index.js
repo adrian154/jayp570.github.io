@@ -1,7 +1,15 @@
 let canvas = document.querySelector("canvas");
 
-canvas.width = 1800;
+canvas.width = 2400;
 canvas.height = 800;
+
+function changeResolution() {
+    if(canvas.width === 1500) {
+        canvas.width = 2400;
+    } else if(canvas.width === 2400) {
+        canvas.width = 1500
+    }
+}
 
 let g = canvas.getContext("2d");
 
@@ -14,11 +22,12 @@ let FRICTION = defaultFRIC
 let MOMENTUMLOSS = -1
 
 const BULLETDAMAGE = 24;
-const RELOADTIME = 10;
+const RELOADTIME = 8;
 let ammoDrops = [];
 
 let powerups = {
-    "shotgun": new Powerup("shotgun")
+    "shotgun": new Powerup("shotgun"),
+    "laser": new Powerup("laser")
 }
 
 
@@ -129,6 +138,31 @@ function Bullet(playerX,playerY,mouseX,mouseY,color,id) {
 
 }
 
+function Laser(playerX, playerY, targetX, targetY, id, color) {
+
+    this.playerPos = {
+        "x": playerX,
+        "y": playerY
+    }
+    this.targetPos = {
+        "x": targetX,
+        "y": targetY
+    }
+
+    this.team = color;
+    this.id = id;
+
+    this.update = function() {
+        context.beginPath();
+        context.strokeStyle = 'white';
+        context.moveTo(this.playerPos.x, this.playerPos.y);
+        context.lineTo(this.targetPos.x, this.targetPos.y);
+        context.lineWidth = 3;
+        context.stroke();
+    }
+
+}
+
 function Player(x, y, color) {
 
     this.w = 32;
@@ -164,6 +198,8 @@ function Player(x, y, color) {
     this.bullets = [];
     this.shooting = false;
     this.shootTimestamp = 0;
+    this.laser = null;
+    this.reloadTime = RELOADTIME;
 
     this.fullDashTimer = 32;
     this.dashTimer = 32;
@@ -174,7 +210,7 @@ function Player(x, y, color) {
 
     this.powerups = {};
     for(let k in powerups) {
-        this.powerups.k = false;
+        this.powerups[k] = false;
     }
 
     this.setDirection = function(code,bool) {
@@ -203,6 +239,10 @@ function Player(x, y, color) {
         this.shootTimestamp = num;
     }
 
+    this.setLaser = function(laser) {
+        this.laser = laser;
+    }
+
     this.checkCollision = function(object) {
         let bX = object.getPos().x;
         let bY = object.getPos().y;
@@ -222,6 +262,17 @@ function Player(x, y, color) {
         this.health-=num;
     }
 
+    this.checkCollisionNonObject = function(bX, bY, bW, bH) {
+        let x = this.pos.x;
+        let y = this.pos.y;
+        let w = this.w;
+        let h = this.h;
+        if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
+            return true;
+        }
+        return false;
+    }
+
     this.heal = function(num) {
         this.health+=num;
         if(this.health >= this.fullHealth) {
@@ -232,7 +283,9 @@ function Player(x, y, color) {
     this.shoot = function(mouseX,mouseY) {
         let x = this.pos.x+this.w/2;
         let y = this.pos.y+this.h/2;
-        this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+        if(this.powerups.laser === false) {
+            this.bullets.push(new Bullet(x,y,mouseX,mouseY,this.team,this.id));
+        }
         if(this.powerups.shotgun) {
             let dist = Math.sqrt(Math.pow(x-mouseX,2)+Math.pow(y-mouseY,2));
             let trshld = 100;
@@ -431,6 +484,14 @@ function Player(x, y, color) {
         return this.shooting;
     }
 
+    this.getLaser = function() {
+        return this.laser;
+    }
+
+    this.getreloadTime = function() {
+        return this.reloadTime;
+    }
+
 }
 
 function Flag(base) {
@@ -453,6 +514,16 @@ function Flag(base) {
     this.depleting = false;
 
     this.update = function() {
+        let basePos = base.getPos();
+        this.spawnPos = {
+            "x": basePos.x+base.getW()/2,
+            "y": basePos.y+base.getH()/2
+        }
+        if(!this.depleting && this.carrier === null) {
+            this.pos.x = this.spawnPos.x;
+            this.pos.y = this.spawnPos.y;
+        }
+
         if(this.carrier != null) {
             this.pos.x = this.carrier.pos.x-5;
             this.pos.y = this.carrier.pos.y-5;
@@ -523,11 +594,17 @@ function Flag(base) {
 
 }
 
-function Base(x,y,w,h,color) {
+function Base(w,h,color) {
 
     this.pos = {
-        "x": x,
-        "y": y
+        "x": canvas.width-150,
+        "y": canvas.height/2-75
+    }
+    if(color === "red") {
+        this.pos = {
+            "x": 0,
+            "y": canvas.height/2-75
+        }
     }
     this.w = w;
     this.h = h;
@@ -538,6 +615,16 @@ function Base(x,y,w,h,color) {
         g.globalAlpha = 0.5;
         g.fillRect(this.pos.x,this.pos.y,this.w,this.h);
         g.globalAlpha = 1.0;
+        this.pos = {
+            "x": canvas.width-150,
+            "y": canvas.height/2-75
+        }
+        if(this.team === "red") {
+            this.pos = {
+                "x": 0,
+                "y": canvas.height/2-75
+            }
+        }
     }
 
     this.getTeam = function() {
@@ -557,17 +644,34 @@ function Base(x,y,w,h,color) {
     }
 }
 
-function HealingStation(x, y, color) {
+function HealingStation(color) {
 
     this.pos = {
-        "x": x,
-        "y": y
+        "x": 50,
+        "y": 50
+    }
+    if(color === "blue") {
+        this.pos = {
+            "x": canvas.width-50,
+            "y": canvas.height-50
+        }
     }
     this.team = color;
     this.w = 40;
     this.h = 40;
 
     this.update = function(g) {
+        this.pos = {
+            "x": 50,
+            "y": 50
+        }
+        if(color === "blue") {
+            this.pos = {
+                "x": canvas.width-50,
+                "y": canvas.height-50
+            }
+        }
+
         g.fillStyle = this.team;
         g.fillRect(this.pos.x-this.w/4, this.pos.y-this.w/2, this.w/2, this.w);
         g.fillRect(this.pos.x-this.w/2, this.pos.y-this.w/4, this.w, this.w/2);
@@ -641,11 +745,11 @@ function AmmoDrop(x, y) {
 
 
 
-let activePowerup = powerups.shotgun;
+let activePowerup = powerups.laser;
 
 let bases = {
-    "red": new Base(0, canvas.height/2-75, 150, 150, "red"),
-    "blue": new Base(canvas.width-150, canvas.height/2-75, 150, 150, "blue")
+    "red": new Base(150, 150, "red"),
+    "blue": new Base(150, 150, "blue")
 }
 
 let flags = {
@@ -654,8 +758,8 @@ let flags = {
 }
 
 let healingStations = {
-    "red": new HealingStation(50,50,"red"),
-    "blue": new HealingStation(canvas.width-50, canvas.height-50, "blue")
+    "red": new HealingStation("red"),
+    "blue": new HealingStation("blue")
 }
 
 let score = {
@@ -671,7 +775,7 @@ let players = {
 let count = 0
 let redXPos = [0, 40, 80];
 let redYPos = 767;
-for(let i = 0; i < 3; i++) {
+for(let i = 0; i < 1; i++) {
     if(i != 0) {
         players.red.push(new Bot(redXPos[i%3], 767, "red", flags, bases, healingStations, count))
     } else {
@@ -681,7 +785,7 @@ for(let i = 0; i < 3; i++) {
 }
 let blueXPos = [1767, 1727, 1727-40];
 let blueYPos = [0, 0, 0];
-for(let i = 1; i < 4; i++) {
+for(let i = 1; i < 2; i++) {
     players.blue.push(new Bot(blueXPos[i%3], 0, "blue", flags, bases, healingStations, count))
     count++;
 }
@@ -797,6 +901,70 @@ function animate() {
         flags.red.update(g);
         flags.blue.update(g);
 
+        if(players.player[0].getShooting()) {
+            let yourPlayer = players.player[0];
+            if(yourPlayer.powerups.laser === false) {
+                if(yourPlayer.shootTimestamp+yourPlayer.getreloadTime() <= yourPlayer.tick) {
+                    players.player[0].shoot(playerShootTarget.x, playerShootTarget.y);
+                    yourPlayer.shootTimestamp = yourPlayer.tick;
+                }
+            } else {
+                g.beginPath();
+                g.strokeStyle = 'white';
+                let x = yourPlayer.getPos().x+yourPlayer.getW()/2;
+                let y = yourPlayer.getPos().y+yourPlayer.getH()/2;
+                let xDist = playerShootTarget.x-x;
+                let yDist = playerShootTarget.y-y;
+                let dist = Math.sqrt(Math.pow(xDist,2)+Math.pow(yDist,2));
+                let increment = {"x": xDist/dist, "y": yDist/dist};
+                let start = {"x": x, "y": y};
+                let end = {"x": playerShootTarget.x, "y": playerShootTarget.y};
+                let hitBounds = false;
+                while(hitBounds === false) {
+                    end.x+=increment.x; end.y+=increment.y;
+                    if(end.x > canvas.width || end.x < 0 || end.y < 0 || end.y > canvas.height) {
+                        hitBounds = true;
+                    }
+                }
+                g.shadowBlur = 10;
+                g.shadowOffsetX = 0;
+                g.shadowOffsetY = 0;
+                g.shadowColor = yourPlayer.getTeam();
+                g.moveTo(x, y);
+                g.lineTo(end.x, end.y);
+                g.lineWidth = 5;
+                g.lineCap = "round";
+                g.stroke();
+                g.shadowBlur = 0;
+                let laserCoords = [];
+                while(start.x <= end.x && start.y <= end.y) {
+                    laserCoords.push({"x": start.x, "y": start.y});
+                    start.x+=increment.x; start.y+=increment.y;
+                }
+                start = {"x": x, "y": y};
+                while(start.x <= end.x && start.y >= end.y) {
+                    laserCoords.push({"x": start.x, "y": start.y});
+                    start.x+=increment.x; start.y+=increment.y;
+                }
+                start = {"x": x, "y": y};
+                while(start.x >= end.x && start.y <= end.y) {
+                    laserCoords.push({"x": start.x, "y": start.y});
+                    start.x+=increment.x; start.y+=increment.y;
+                }
+                start = {"x": x, "y": y};
+                while(start.x >= end.x && start.y >= end.y) {
+                    laserCoords.push({"x": start.x, "y": start.y});
+                    start.x+=increment.x; start.y+=increment.y;
+                }
+                let playerLaser = {
+                    "team": yourPlayer.getTeam(),
+                    "coords": laserCoords,
+                    "id": yourPlayer.getID()
+                }
+                yourPlayer.setLaser(playerLaser);
+            }
+        }
+
         for(let i in players) {
             for(let j = 0; j < players[i].length; j++) {
                 players[i][j].update(g);
@@ -900,6 +1068,33 @@ function animate() {
             }
         }
 
+        let lasers = [];
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                if(player.getLaser() != null) {
+                    lasers.push(player.getLaser())
+                }
+            }
+        }
+        for(let i in players) {
+            for(let j = 0; j < players[i].length; j++) {
+                let player = players[i][j];
+                for(let k = 0; k < lasers.length; k++) {
+                    for(let l = 0; l < lasers[k].coords.length; l++) {
+                        let laserCoords = lasers[k].coords[l];   
+                        if(player.checkCollisionNonObject(laserCoords.x, laserCoords.y, 1, 1) && lasers[k].team != player.getTeam()) {
+                            player.takeDamage(0.1);
+                            player.setVel({x: player.getVel().x/1.005, y: player.getVel().y/1.005});
+                        }    
+                    }
+                }
+            }
+        }
+        if(players.player[0].getShooting() === false) {
+            players.player[0].setLaser(null);
+        }
+
         for(let i in players) {
             for(let j = 0; j < players[i].length; j++) {
                 let player = players[i][j];
@@ -930,14 +1125,6 @@ function animate() {
         for(let i = 0; i < ammoDrops.length; i++) {
             if(ammoDrops[i].getTimer() < 0) {
                 ammoDrops.splice(i,1);
-            }
-        }
-
-        if(players.player[0].getShooting()) {
-            let yourPlayer = players.player[0];
-            if(yourPlayer.shootTimestamp+RELOADTIME <= yourPlayer.tick) {
-                players.player[0].shoot(playerShootTarget.x, playerShootTarget.y);
-                yourPlayer.shootTimestamp = yourPlayer.tick;
             }
         }
 

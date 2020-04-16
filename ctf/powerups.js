@@ -12,6 +12,7 @@ function Powerup(name) {
     this.h = 90;
 
     this.update = function(g) {
+        this.pos.x = canvas.width/2-49;
         g.drawImage(this.img,this.pos.x,this.pos.y);
     }
 

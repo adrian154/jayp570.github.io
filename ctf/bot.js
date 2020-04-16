@@ -36,6 +36,8 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
     this.shooting = false;
     this.shootTimestamp = 0;
     this.tick = 0;
+    this.laser = null;
+    this.reloadTime = RELOADTIME;
 
     this.fullDashTimer = 32;
     this.dashTimer = 32;
@@ -58,7 +60,7 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
 
     this.powerups = {};
     for(let k in powerups) {
-        this.powerups.k = false;
+        this.powerups[k] = false;
     }
 
     this.setPlayers = function(players) {
@@ -90,11 +92,26 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         this.vel = vel;
     }
 
+    this.setLaser = function(laser) {
+        this.laser = laser;
+    }
+
     this.checkCollision = function(object) {
         let bX = object.getPos().x;
         let bY = object.getPos().y;
         let bW = object.getW();
         let bH = object.getH();
+        let x = this.pos.x;
+        let y = this.pos.y;
+        let w = this.w;
+        let h = this.h;
+        if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
+            return true;
+        }
+        return false;
+    }
+
+    this.checkCollisionNonObject = function(bX, bY, bW, bH) {
         let x = this.pos.x;
         let y = this.pos.y;
         let w = this.w;
@@ -139,6 +156,62 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             this.vel.x-=this.bullets[this.bullets.length-1].getVel().x/2;
             this.vel.y-=this.bullets[this.bullets.length-1].getVel().y/2;
         }
+    }
+
+    this.fireLaser = function(mouseX, mouseY) {
+        g.beginPath();
+        g.strokeStyle = 'white';
+        let x = this.pos.x+this.w/2;
+        let y = this.pos.y+this.h/2;
+        let xDist = mouseX-x;
+        let yDist = mouseY-y;
+        let dist = Math.sqrt(Math.pow(xDist,2)+Math.pow(yDist,2));
+        let increment = {"x": xDist/dist, "y": yDist/dist};
+        let laserCoords = [];
+        let start = {"x": x, "y": y};
+        let end = {"x": mouseX, "y": mouseY};
+        let hitBounds = false;
+        while(hitBounds === false) {
+            end.x+=increment.x; end.y+=increment.y;
+            if(end.x > canvas.width || end.x < 0 || end.y < 0 || end.y > canvas.height) {
+                hitBounds = true;
+            }
+        }
+        g.shadowBlur = 10;
+        g.shadowOffsetX = 0;
+        g.shadowOffsetY = 0;
+        g.shadowColor = this.team;
+        g.moveTo(x, y);
+        g.lineTo(end.x, end.y);
+        g.lineWidth = 5;
+        g.lineCap = "round";
+        g.stroke();
+        g.shadowBlur = 0;
+        while(start.x <= end.x && start.y <= end.y) {
+            laserCoords.push({"x": start.x, "y": start.y});
+            start.x+=increment.x; start.y+=increment.y;
+        }
+        start = {"x": x, "y": y};
+        while(start.x <= end.x && start.y >= end.y) {
+            laserCoords.push({"x": start.x, "y": start.y});
+            start.x+=increment.x; start.y+=increment.y;
+        }
+        start = {"x": x, "y": y};
+        while(start.x >= end.x && start.y <= end.y) {
+            laserCoords.push({"x": start.x, "y": start.y});
+            start.x+=increment.x; start.y+=increment.y;
+        }
+        start = {"x": x, "y": y};
+        while(start.x >= end.x && start.y >= end.y) {
+            laserCoords.push({"x": start.x, "y": start.y});
+            start.x+=increment.x; start.y+=increment.y;
+        }
+        let playerLaser = {
+            "team": this.getTeam(),
+            "coords": laserCoords,
+            "id": this.getID()
+        }
+        this.setLaser(playerLaser);
     }
 
     this.dash = function() {
@@ -267,13 +340,16 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
         }
         this.acc.x = 0; this.acc.y = 0;
         this.w = 32; this.h = 32;
+        if(this.shooting === false) {
+            this.laser = null;
+        }
 
         //behavior
         let shootingTarget = {"x": null, "y": null};       
         let shootChance = Math.round(Math.random()*51+1); 
         if(this.isCarrier === false) {
             let closestEnemy = this.findClosestPlayer(this.enemyTeam).player;
-            shootingTarget.x = closestEnemy.getPos().x;
+            shootingTarget.x = closestEnemy.getPos().x+closestEnemy.getW()/2;
             shootingTarget.y = closestEnemy.getPos().y;
             this.findObject(this.flags[this.enemyTeam]);
             if(this.health < 25) {
@@ -281,14 +357,14 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             }
             if(this.checkFlagCarried(this.flags[this.enemyTeam]) != null) {
                 this.findObject(closestEnemy);
-                shootingTarget.x = closestEnemy.getPos().x;
-                shootingTarget.y = closestEnemy.getPos().y;
+                shootingTarget.x = closestEnemy.getPos().x+closestEnemy.getW()/2;
+                shootingTarget.y = closestEnemy.getPos().y+closestEnemy.getH()/2;
             }
             if(this.checkFlagCarried(this.flags[this.team]) != null) {
                 let enemyFlagCarrier = this.checkFlagCarried(this.flags[this.team]);
                 this.findObject(enemyFlagCarrier);
-                shootingTarget.x = enemyFlagCarrier.getPos().x;
-                shootingTarget.y = enemyFlagCarrier.getPos().y;
+                shootingTarget.x = enemyFlagCarrier.getPos().x+enemyFlagCarrier.getW()/2;
+                shootingTarget.y = enemyFlagCarrier.getPos().y+enemyFlagCarrier.getH()/2;
             }
             let dashChance = Math.round(Math.random()*51+1);
             if(dashChance === 50) {
@@ -304,17 +380,21 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             if(shootChance === 50) {
                 this.shooting = !this.shooting;
             }
-            shootingTarget.x = closestEnemy.getPos().x;
-            shootingTarget.y = closestEnemy.getPos().y;
+            shootingTarget.x = closestEnemy.getPos().x+closestEnemy.getW()/2;
+            shootingTarget.y = closestEnemy.getPos().y+closestEnemy.getH()/2;
             this.avoid(this.enemyTeam);
         }
         if(this.healing) {
             this.findObject(this.healingStations[this.team]);
         }
         if(this.shooting) {
-            if(this.shootTimestamp+RELOADTIME <= this.tick) {
-                this.shoot(shootingTarget.x, shootingTarget.y);
-                this.shootTimestamp = this.tick;
+            if(this.powerups.laser === false) {
+                if(this.shootTimestamp+this.reloadTime <= this.tick) {
+                    this.shoot(shootingTarget.x, shootingTarget.y);
+                    this.shootTimestamp = this.tick;
+                }
+            } else {
+                this.fireLaser(shootingTarget.x, shootingTarget.y);
             }
         }
         
@@ -449,6 +529,10 @@ function Bot(x, y, color, flags, bases, healingStations, ID) {
             "downIn": this.downIn
         }
         return directions;
+    }
+
+    this.getLaser = function() {
+        return this.laser;
     }
 
 }
