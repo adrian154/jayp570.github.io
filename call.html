@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>calallaalalla????</title>
+    <style type="text/css">
+        canvas {
+            border: 1px solid white;
+        }
+        body {
+            margin-top: 10px;
+            width: 45%; 
+            margin-left: auto; 
+            margin-right: auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            background-color: #000000;
+            text-align: left;
+            display: block;
+        }
+        button {
+            background-color: rgb(0, 182, 0);
+            transition-duration: 0.3s; 
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 10px;
+            border: 0;
+            outline: none;
+            user-select: none;
+        }
+        button:hover {
+            background-color: rgb(0, 255, 0);
+        }
+        button:active {
+            background-color: #000000;
+            outline: none;
+        }
+        input {
+            border: 0px;
+            background-color: #000000;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <script>
+
+        function makeCall() {
+            let callMsg = "c";
+            let letters = ["a","l"];
+            let numofLetters = Math.floor(Math.random()*10)+10;
+            for(let i = 0; i < numofLetters; i++) {
+                let letter = Math.round(Math.random());
+                letter = letters[letter];
+                callMsg+=letter;
+            }
+            letters = ["!","?","/"];
+            let numOfSymbols = Math.floor(Math.random()*5)+5;
+            for(let i = 0; i < numOfSymbols; i++) {
+                let letter = Math.floor(Math.random()*letters.length);
+                letter = letters[letter]
+                callMsg+=letter;
+            }
+            document.getElementById("text").innerHTML = callMsg;
+        }
+
+        function copy() {
+            let textArea = document.createElement("textArea");
+            if(document.getElementById("text").innerHTML != "") {
+                textArea.value = document.getElementById("text").innerHTML;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");    
+                document.body.removeChild(textArea);
+            }
+        }
+
+    </script>
+    <button onclick="makeCall()">Call?</button>
+    <button onclick="copy()">Copy?</button>
+    <h1 id="text"></h1>
+    
+    
+</body>
+</html>
