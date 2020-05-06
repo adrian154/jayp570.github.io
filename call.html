@@ -58,13 +58,29 @@
     <h1></h1>
     <script>
 
+        let minLetters = 10; 
+        let maxLetters = 20;
+        let minSymbols = 5;
+        let maxSymbols = 10;
+
         function makeCall(a) {
+
+            minLetters = parseInt(document.getElementById("minLetters").value);
+            maxLetters = parseInt(document.getElementById("maxLetters").value);
+            minSymbols = parseInt(document.getElementById("minSymbols").value);
+            maxSymbols = parseInt(document.getElementById("maxSymbols").value);
+
+            if(minLetters === NaN) {minLetters = 10;}
+            if(maxLetters === NaN) {maxLetters = 20;}
+            if(minSymbols === NaN) {minSymbols = 5;}
+            if(maxSymbols === NaN) {maxSymbols = 10;}
+            console.log(minLetters);
+
+            //fix issue - NaN does not equal to NaN
+
             let callMsg = "";
             let letters = ["a","l"];
-            let min = parseInt(document.getElementById("minLetters").value);
-            let max = parseInt(document.getElementById("maxLetters").value);
-            if(document.getElementById("minLetters").value === "") min = 10; if(document.getElementById("maxLetters").value === "") max = 20; 
-            let numofLetters = Math.floor(Math.random()*(max+1-min))+min;
+            let numofLetters = Math.floor(Math.random()*(maxLetters+1-minLetters))+minLetters;
             for(let i = 0; i < numofLetters; i++) {
                 if(i > 0) {
                     let letter = Math.round(Math.random());
@@ -75,16 +91,20 @@
                 }
             }
             letters = ["!","?","/","1"];
-            min = parseInt(document.getElementById("minSymbols").value);
-            max = parseInt(document.getElementById("maxSymbols").value);
-            if(document.getElementById("minSymbols").value === "") min = 5; if(document.getElementById("maxSymbols").value === "") max = 10; 
-            let numOfSymbols = Math.floor(Math.random()*(max+1-min))+min;
+            let numOfSymbols = Math.floor(Math.random()*(maxSymbols+1-minSymbols))+minSymbols;
             for(let i = 0; i < numOfSymbols; i++) {
                 let letter = Math.floor(Math.random()*letters.length);
                 letter = letters[letter]
                 callMsg+=letter;
             }
             document.getElementById("text").innerHTML = callMsg;
+        }
+
+        function setDiscordLimit() {
+            document.getElementById("minLetters").value = "1000";
+            document.getElementById("maxLetters").value = "1000";
+            document.getElementById("minSymbols").value = "1000";
+            document.getElementById("maxSymbols").value = "1000";
         }
 
         function copy() {
@@ -105,7 +125,8 @@
     <input type="text" id="minLetters" placeholder="Min Letters">
     <input type="text" id="maxLetters" placeholder="Max Letters"> <br><br>
     <input type="text" id="minSymbols" placeholder="Min Symbols">
-    <input type="text" id="maxSymbols" placeholder="Max Symbols">
+    <input type="text" id="maxSymbols" placeholder="Max Symbols"> <br><br><br>
+    <button onclick="setDiscordLimit()">Set to Discord Message Limits</button>
     <h1 id="text"></h1>
     
     
