@@ -38,11 +38,19 @@
             outline: none;
         }
         input {
-            border: 0px;
+            padding: 6px;
+            border: none;
+            border-bottom: 2px solid white;
+            transition-duration: 0.3s;
             background-color: #000000;
             color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
+        }
+        input:focus {
+            border: 2px solid white;
+            outline: none;
+            background-color: #111111;
+            color: white;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -51,16 +59,26 @@
     <script>
 
         function makeCall(a) {
-            let callMsg = a;
+            let callMsg = "";
             let letters = ["a","l"];
-            let numofLetters = Math.floor(Math.random()*10)+10;
+            let min = parseInt(document.getElementById("minLetters").value);
+            let max = parseInt(document.getElementById("maxLetters").value);
+            if(document.getElementById("minLetters").value === "") min = 10; if(document.getElementById("maxLetters").value === "") max = 20; 
+            let numofLetters = Math.floor(Math.random()*(max+1-min))+min;
             for(let i = 0; i < numofLetters; i++) {
-                let letter = Math.round(Math.random());
-                letter = letters[letter];
-                callMsg+=letter;
+                if(i > 0) {
+                    let letter = Math.round(Math.random());
+                    letter = letters[letter];
+                    callMsg+=letter;
+                } else {
+                    callMsg+=a;
+                }
             }
-            letters = ["!","?","/"];
-            let numOfSymbols = Math.floor(Math.random()*5)+5;
+            letters = ["!","?","/","1"];
+            min = parseInt(document.getElementById("minSymbols").value);
+            max = parseInt(document.getElementById("maxSymbols").value);
+            if(document.getElementById("minSymbols").value === "") min = 5; if(document.getElementById("maxSymbols").value === "") max = 10; 
+            let numOfSymbols = Math.floor(Math.random()*(max+1-min))+min;
             for(let i = 0; i < numOfSymbols; i++) {
                 let letter = Math.floor(Math.random()*letters.length);
                 letter = letters[letter]
@@ -83,7 +101,11 @@
     </script>
     <button onclick="makeCall('c')">Call?</button>
     <button onclick="makeCall('h')">Halal?</button>
-    <button onclick="copy()">Copy?</button>
+    <button onclick="copy()">Copy?</button> <br><br><br>
+    <input type="text" id="minLetters" placeholder="Min Letters">
+    <input type="text" id="maxLetters" placeholder="Max Letters"> <br><br>
+    <input type="text" id="minSymbols" placeholder="Min Symbols">
+    <input type="text" id="maxSymbols" placeholder="Max Symbols">
     <h1 id="text"></h1>
     
     
