@@ -38,12 +38,13 @@
             outline: none;
         }
         input {
-            padding: 6px;
+            padding: 20px;
             border: none;
             border-bottom: 2px solid white;
             transition-duration: 0.3s;
             background-color: #000000;
             color: white;
+            width:75%;
         }
         input:focus {
             border: 2px solid white;
@@ -53,12 +54,13 @@
             border-radius: 5px;
         }
         #output:focus {
-            padding: 6px;
+            padding: 20px;
             border: none;
             border-bottom: 2px solid white;
             transition-duration: 0.3s;
             background-color: #000000;
             color: white;
+            width:75%;
         }
     </style>
 </head>
@@ -109,7 +111,20 @@
                 }
             }
             document.getElementById("output").value = newNewWord;
+            document.getElementById("copiedMsg").innerHTML = "";
 
+        }
+
+        function copy() {
+            let textArea = document.createElement("textArea");
+            if(document.getElementById("output").value != "") {
+                textArea.value = document.getElementById("output").value;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand("copy");    
+                document.body.removeChild(textArea);
+                document.getElementById("copiedMsg").innerHTML = "Copied!";
+            }
         }
 
     </script>
@@ -119,6 +134,8 @@
     <h2>L33t Text</h2>
     <input type="text" id="output" placeholder="Translation" readonly> <br><br>
     <button onclick="translateWord()">Translate</button>
+    <button onclick="copy()">Copy</button>
+    <h3 id="copiedMsg"></h3>
     
     
 </body>
