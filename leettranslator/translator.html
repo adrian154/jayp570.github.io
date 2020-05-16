@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>l33tspeak Translator</title>
+    <style type="text/css">
+        canvas {
+            border: 1px solid white;
+        }
+        body {
+            margin-top: 10px;
+            width: 45%; 
+            margin-left: auto; 
+            margin-right: auto;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            background-color: #000000;
+            text-align: left;
+            display: block;
+        }
+        button {
+            background-color: rgb(0, 182, 0);
+            transition-duration: 0.3s; 
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 10px;
+            border: 0;
+            outline: none;
+            user-select: none;
+        }
+        button:hover {
+            background-color: rgb(0, 255, 0);
+        }
+        button:active {
+            background-color: #000000;
+            outline: none;
+        }
+        input {
+            padding: 6px;
+            border: none;
+            border-bottom: 2px solid white;
+            transition-duration: 0.3s;
+            background-color: #000000;
+            color: white;
+        }
+        input:focus {
+            border: 2px solid white;
+            outline: none;
+            background-color: #111111;
+            color: white;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <script>
+
+        function translateWord() {
+
+            let word = document.getElementById("input").value;
+            word = word.split("")
+            let newWord = "";
+            for(let i = 0; i < word.length; i++) {
+                switch(word[i]) {
+                    case "a": 
+                        newWord+="4"; 
+                        break;
+                    case "e": 
+                        newWord+="3"; 
+                        break;
+                    case "l": 
+                        newWord+="1"; 
+                        break;
+                    case "o": 
+                        newWord+="0"; 
+                        break;
+                    case "t": 
+                        newWord+="7"; 
+                        break;
+                    case "s":
+                        newWord+="5";
+                        break;
+                    default: 
+                        newWord+=word[i];
+                }
+            }
+            
+            let newWordList = newWord.split("");
+            let newNewWord = "";
+            for(let i = 0; i < newWordList.length; i++) {
+                if(newWord.indexOf("ck") == i) {
+                    newNewWord+="x";
+                    i++;
+                } else if(newWord.indexOf("3r") == i) {
+                    newNewWord+="0r";
+                    i++;
+                } else {
+                    newNewWord+=newWordList[i];
+                }
+            }
+            document.getElementById("output").value = newNewWord;
+
+        }
+
+    </script>
+    <h1>l33tspeak Translator</h1>
+    <h2>Normal Text</h2>
+    <input type="text" id="input" placeholder="Enter text">
+    <h2>L33t Text</h2>
+    <input type="text" id="output" placeholder="Translation"> <br><br>
+    <button onclick="translateWord()">Translate</button>
+    
+    
+</body>
+</html>

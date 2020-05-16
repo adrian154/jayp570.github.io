@@ -70,13 +70,6 @@
             minSymbols = parseInt(document.getElementById("minSymbols").value);
             maxSymbols = parseInt(document.getElementById("maxSymbols").value);
 
-            if(minLetters === NaN) {minLetters = 10;}
-            if(maxLetters === NaN) {maxLetters = 20;}
-            if(minSymbols === NaN) {minSymbols = 5;}
-            if(maxSymbols === NaN) {maxSymbols = 10;}
-            console.log(minLetters);
-
-            //fix issue - NaN does not equal to NaN
 
             let callMsg = "";
             let letters = ["a","l"];
@@ -90,7 +83,7 @@
                     callMsg+=a;
                 }
             }
-            letters = ["!","?","/","1"];
+            letters = ["!","?","?","/","1"];
             let numOfSymbols = Math.floor(Math.random()*(maxSymbols+1-minSymbols))+minSymbols;
             for(let i = 0; i < numOfSymbols; i++) {
                 let letter = Math.floor(Math.random()*letters.length);
