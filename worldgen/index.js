@@ -5,52 +5,58 @@ canvas.height = 600;
 
 let g = canvas.getContext("2d");
 
-
 function Map() {
 
     this.map = [];
 
+    let settings = new Settings();
 
     let tempX = 0;
     let x = tempX;
     let y = 0;
-    for(let i = 0; i < canvas.height/2; i++) {
+    for(let i = 0; i < canvas.height/settings.tileSize; i++) {
         this.map.push([]);
-        for(let j = 0; j < canvas.width/2; j++) {
-            let chance = Math.floor(Math.random()*10000);
+        for(let j = 0; j < canvas.width/settings.tileSize; j++) {
+            let chance = Math.floor(Math.random()*20000/settings.tileSize);
             if(chance == 5) {
                 this.map[i].push(new Grass(x, y));
             } else {
                 this.map[i].push(new Water(x, y));
             }
-            x+=this.map[i][j].getDimensions().w;
+            x+=settings.tileSize;
         }
-        y+=this.map[i][this.map[i].length-1].getDimensions().w;
+        y+=settings.tileSize;
         x = tempX;
     }
 
-    for(let count = 0; count < 75; count++) {
+    /*
+
+    let directions = {
+        x: [-2, -1, 0, 1, 2],
+        y: [-2, -1, 0, 1, 2]
+    }
+    for(let count = 0; count < (47*2)/settings.tileSize; count++) {
         for(let i = 0; i < this.map.length; i++) {
             for(let j = 0; j < this.map[i].length; j++) {
                 if(this.map[i][j].getName() == "grass") {
                     try {
-                        let chance = Math.floor(Math.random()*5)
-                        if(chance == 0) {
-                            let neighborPos = this.map[i+1][j].getPos();
-                            this.map[i+1][j] = new Grass(neighborPos.x, neighborPos.y);
+                        let dir = {
+                            x: directions.x[Math.floor(Math.random()*directions.x.length)],
+                            y: directions.y[Math.floor(Math.random()*directions.y.length)]
                         }
-                        if(chance == 1) {
-                            let neighborPos = this.map[i][j+1].getPos();
-                            this.map[i][j+1] = new Grass(neighborPos.x, neighborPos.y);
+                        if(dir.x != 0 && dir.y != 0) {
+                            let num = Math.round(Math.random());
+                            if(num == 0) {
+                                dir.x = 0;
+                            } else {
+                                dir.y = 0;
+                            }
                         }
-                        if(chance == 2) {
-                            let neighborPos = this.map[i-1][j].getPos();
-                            this.map[i-1][j] = new Grass(neighborPos.x, neighborPos.y);
+                        if(this.map[i+dir.y][j+dir.x].getName() == "water") {
+                            let neighborPos = this.map[i+dir.y][j+dir.x].getPos();
+                            this.map[i+dir.y][j+dir.x] = new Grass(neighborPos.x, neighborPos.y);
                         }
-                        if(chance == 3) {
-                            let neighborPos = this.map[i][j-1].getPos();
-                            this.map[i][j-1] = new Grass(neighborPos.x, neighborPos.y);
-                        }
+                        
                     } catch (error) {
                         
                     }
@@ -58,9 +64,100 @@ function Map() {
             }
         }
     }
+
+    for(let i = 0; i < this.map.length; i++) {
+        for(let j = 0; j < this.map[i].length; j++) {
+            try {
+                let surrounding = [this.map[i+1][j], this.map[i-1][j], this.map[i][j+1], this.map[i][j-1]];
+                if(this.map[i][j].getName() == "grass") {
+                    let nextToWater = false;
+                    for(let k = 0; k < surrounding.length; k++) {
+                        if(surrounding[k].getName() == "water") {
+                            nextToWater = true;
+                            break;
+                        }
+                    }
+                    if(nextToWater) {
+                        this.map[i][j] = new Sand(this.map[i][j].getPos().x, this.map[i][j].getPos().y);
+                    }
+                }
+            } catch (error) {
+                
+            }
+        }
+    }
+    for(let i = 0; i < this.map.length; i++) {
+        for(let j = 0; j < this.map[i].length; j++) {
+
+        }
+    }
     
+    */
+
+    this.frame = 0;
 
     this.draw = function(g) {
+
+
+        let directions = {
+            x: [-2, -1, 0, 1, 2],
+            y: [-2, -1, 0, 1, 2]
+        }
+        if(this.frame < (47*2)/settings.tileSize) {
+            for(let i = 0; i < this.map.length; i++) {
+                for(let j = 0; j < this.map[i].length; j++) {
+                    if(this.map[i][j].getName() == "grass") {
+                        try {
+                            let dir = {
+                                x: directions.x[Math.floor(Math.random()*directions.x.length)],
+                                y: directions.y[Math.floor(Math.random()*directions.y.length)]
+                            }
+                            if(dir.x != 0 && dir.y != 0) {
+                                let num = Math.round(Math.random());
+                                if(num == 0) {
+                                    dir.x = 0;
+                                } else {
+                                    dir.y = 0;
+                                }
+                            }
+                            if(this.map[i+dir.y][j+dir.x].getName() == "water") {
+                                let neighborPos = this.map[i+dir.y][j+dir.x].getPos();
+                                this.map[i+dir.y][j+dir.x] = new Grass(neighborPos.x, neighborPos.y);
+                            }
+                            
+                        } catch (error) {
+                            
+                        }
+                    }
+                }
+            }
+        }
+        this.frame++;
+
+        if(this.frame == (47*2)/settings.tileSize) {
+            for(let i = 0; i < this.map.length; i++) {
+                for(let j = 0; j < this.map[i].length; j++) {
+                    try {
+                        let surrounding = [this.map[i+1][j], this.map[i-1][j], this.map[i][j+1], this.map[i][j-1]];
+                        if(this.map[i][j].getName() == "grass") {
+                            let nextToWater = false;
+                            for(let k = 0; k < surrounding.length; k++) {
+                                if(surrounding[k].getName() == "water") {
+                                    nextToWater = true;
+                                    break;
+                                }
+                            }
+                            if(nextToWater) {
+                                this.map[i][j] = new Sand(this.map[i][j].getPos().x, this.map[i][j].getPos().y);
+                            }
+                        }
+                    } catch (error) {
+                        
+                    }
+                }
+            }
+        }
+
         for(let i = 0; i < this.map.length; i++) {
             for(let j = 0; j < this.map[i].length; j++) {
                 this.map[i][j].draw(g);

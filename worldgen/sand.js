@@ -1,4 +1,4 @@
-function Water(x, y) {
+function Sand(x, y) {
     
     let settings = new Settings();
 
@@ -11,10 +11,10 @@ function Water(x, y) {
         "h": settings.tileSize
     }
 
-    this.name = "water"
+    this.name = "sand"
 
     this.draw = function(g) {
-        g.fillStyle = "rgb(5,179,244)";
+        g.fillStyle = "rgb(240,230,140)";
         g.fillRect(this.pos.x, this.pos.y, this.dimensions.w, this.dimensions.h);
     }    
 
