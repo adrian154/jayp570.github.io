@@ -5,9 +5,17 @@ canvas.height = 800;
 
 let g = canvas.getContext("2d");
 
+let dim = 10;
+const TILESIZE = 800/dim;
+
+let showRays = false;
+function toggleRays() {
+    showRays = !showRays;
+}
+
 function Tile(x, y, num) {
     this.num = num;
-    this.size = 100;
+    this.size = TILESIZE;
     this.pos = {
         "x": x,
         "y": y
@@ -32,28 +40,31 @@ function Tile(x, y, num) {
     }
 }
 
-let mapTemplate = [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 0, 1, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 1, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1]
-];
-
-let map = [];
-
-for(let i = 0; i < mapTemplate.length; i++) {
-    map.push([]);
-    for(let j = 0; j < mapTemplate[i].length; j++) {
-        map[i].push(new Tile(j*100, i*100, mapTemplate[i][j]));
+let mapTemplate = [];
+for(let i = 0; i < dim; i++) {
+    mapTemplate.push([]);
+    for(let j = 0; j < dim; j++) {
+        if(i == 0 || j == 0 || i == dim-1 || j == dim-1) {
+            mapTemplate[i].push(1);
+        } else {
+            mapTemplate[i].push(0);
+        }
     }
 }
 
-let tileWidth = 100;
-let tileHeight = 100;
+let map = [];
+
+function makeMap() {
+    for(let i = 0; i < mapTemplate.length; i++) {
+        map.push([]);
+        for(let j = 0; j < mapTemplate[i].length; j++) {
+            map[i].push(new Tile(j*TILESIZE, i*TILESIZE, mapTemplate[i][j]));
+        }
+    }
+}
+
+makeMap();
+
 
 function drawMap() {
     g.fillStyle = "gray"
@@ -67,32 +78,32 @@ function drawMap() {
 
 let playerPos = {
     "x": 400,
-    "y": 300
+    "y": 400
 }
 
-let playerLookAngle = 0;
+let playerSpeed = 5;
+
+let playerLookAngle = 45;
 let playerDeltaPos = {
-    "x": Math.cos(playerLookAngle)*5,
-    "y": Math.sin(playerLookAngle)*5
+    "x": Math.cos(playerLookAngle)*playerSpeed,
+    "y": Math.sin(playerLookAngle)*playerSpeed
 }
 let lookLeftIn = false;
 let lookRightIn = false;
-
-let playerSpeed = 2;
 
 let leftIn = false;
 let rightIn = false;
 let upIn = false;
 let downIn = false;
 
-let FOV = 100;
+let FOV = 89;
 
 
 
 function updatePlayer() {
     playerDeltaPos = {
-        "x": Math.cos(playerLookAngle)*3,
-        "y": Math.sin(playerLookAngle)*3
+        "x": Math.cos(playerLookAngle)*playerSpeed,
+        "y": Math.sin(playerLookAngle)*playerSpeed
     }
     if(upIn) {playerPos.y+=playerDeltaPos.y; playerPos.x+=playerDeltaPos.x}
     if(downIn) {playerPos.y-=playerDeltaPos.y; playerPos.x-=playerDeltaPos.x}
@@ -117,9 +128,10 @@ function drawPlayer() {
 
 let lengths = [];
 
-function drawRays() {
+function drawRays(draw) {
     g.strokeStyle = "green";
-    let rayAngle = playerLookAngle;
+    let cameraAngle = (playerLookAngle-((FOV/2)*Math.PI/180))
+    let rayAngle = cameraAngle;
     for(let i = -FOV/2; i < FOV/2; i++) {
         rayAngle+=Math.PI/180;
         if(rayAngle > 2*Math.PI) {
@@ -135,16 +147,18 @@ function drawRays() {
             "y": playerPos.y+5
         }
         while(hitWall == false) {
-            g.beginPath();
-            g.moveTo(pos.x, pos.y);
-            g.lineTo(pos.x+Math.cos(rayAngle), pos.y+Math.sin(rayAngle));
-            g.stroke();
+            if(draw) {
+                g.beginPath();
+                g.moveTo(pos.x, pos.y);
+                g.lineTo(pos.x+Math.cos(rayAngle), pos.y+Math.sin(rayAngle));
+                g.stroke();
+            }
             for(let j = 0; j < map.length; j++) {
                 for(let k = 0; k < map[j].length; k++) {
                     if(map[j][k].num == 1) {
                         if(map[j][k].checkCollision(pos.x, pos.y, 1, 1)) {
                             hitWall = true;
-                            lengths.push(length);
+                            lengths.push(length*(Math.cos(rayAngle-playerLookAngle)));
                             break;
                         }
                     }
@@ -166,37 +180,60 @@ window.addEventListener('keyup', keyUpHandler, false);
 function keyDownHandler(e) {
     let code = e.keyCode;
     switch(code) {
-        case 65: leftIn = true; break;
         case 87: upIn = true; break;
-        case 68: rightIn = true; break;
         case 83: downIn = true; break;
-        case 37: lookLeftIn = true; break;
-        case 39: lookRightIn = true; break;
+        case 65: lookLeftIn = true; break;
+        case 68: lookRightIn = true; break;
         default: ;
     }
 }
 function keyUpHandler(e) {
     let code = e.keyCode;
     switch(code) {
-        case 65: leftIn = false; break;
         case 87: upIn = false; break;
-        case 68: rightIn = false; break;
         case 83: downIn = false; break;
-        case 37: lookLeftIn = false; break;
-        case 39: lookRightIn = false; break;
+        case 65: lookLeftIn = false; break;
+        case 68: lookRightIn = false; break;
         default: ;
+    }
+}
+
+window.addEventListener("mousedown", mouseDownHandler, false);
+function mouseDownHandler(e) {
+    let rect = canvas.getBoundingClientRect();
+    let mouseX = event.clientX - rect.left;
+    let mouseY = event.clientY - rect.top;
+    if(mouseX < 800 && mouseY < 800) {
+        for(let i = 0; i < map.length; i++) {
+            for(let j = 0; j < map[i].length; j++) {
+                if(map[i][j].checkCollision(mouseX, mouseY, 0, 0)) {
+                    if(mapTemplate[i][j] == 1) {
+                        mapTemplate[i][j] = 0;
+                    } else {
+                        mapTemplate[i][j] = 1;
+                    }
+                    map = []
+                    makeMap();
+                }
+            }
+        }
     }
 }
 
 function drawScreen() {
     g.fillStyle = "gray"
     g.fillRect(800, 0, canvas.width-800, canvas.height);
+    g.fillStyle = "skyblue"
+    g.fillRect(800, 0, canvas.width-800, canvas.height/2);
     for(let i = 0; i < lengths.length; i++) {
-        let color = "rgb(0,"+(255-lengths[i]/2)+","+(255-lengths[i]/2)+")"
-        let w = ((canvas.width-800)/FOV)
-        let h = 700-lengths[i];
+        let red = (255-lengths[i]/2)
+        let green = (255-lengths[i]/2)
+        let blue = 0
+        let color = "rgb("+red+","+green+","+blue+")"
+        let w = ((canvas.width-800)/FOV)+2
+        let h = (55000/lengths[i]);
         let y = 400-(h/2);
-        let x = 800+(i*w);
+        let x = 800+(i*(w-2));
         g.fillStyle = color;
         g.fillRect(x, y, w, h);
     }
@@ -209,7 +246,7 @@ function animate() {
     drawScreen();
     updatePlayer();
     drawPlayer();
-    drawRays();
+    drawRays(showRays);
     for(let i = 0; i < lengths.length; i++) {
         lengths.shift();
     }
