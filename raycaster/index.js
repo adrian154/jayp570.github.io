@@ -5,7 +5,7 @@ canvas.height = 800;
 
 let g = canvas.getContext("2d");
 
-let dim = 16;
+let dim = 12;
 const TILESIZE = 800/dim;
 
 let showRays = false;
@@ -204,6 +204,8 @@ function drawPlayer() {
 }
 
 let lengths = [];
+let step = 1;
+let brightness = 0.6999;
 
 function drawRays(draw) {
     g.strokeStyle = "green";
@@ -227,13 +229,13 @@ function drawRays(draw) {
             if(draw) {
                 g.beginPath();
                 g.moveTo(pos.x, pos.y);
-                g.lineTo(pos.x+Math.cos(rayAngle), pos.y+Math.sin(rayAngle));
+                g.lineTo(pos.x+(Math.cos(rayAngle)*step), pos.y+(Math.sin(rayAngle)*step));
                 g.stroke();
             }
             for(let j = 0; j < map.length; j++) {
                 for(let k = 0; k < map[j].length; k++) {
                     if(map[j][k].num > 0) {
-                        if(map[j][k].checkCollision(pos.x, pos.y, 1, 1) && map[j][k].num > 0) {
+                        if(map[j][k].checkCollision(pos.x, pos.y, 1, 1)) {
                             hitWall = true;
                             lengths.push(   {
                                     "distance": length*(Math.cos(rayAngle-playerLookAngle))*10000/10000,
@@ -248,10 +250,10 @@ function drawRays(draw) {
                 }
             }
             if(hitWall == false) {
-                length++;
+                length += Math.sqrt(Math.pow(Math.cos(rayAngle)*step,2) + Math.pow(Math.sin(rayAngle)*step,2));
                 pos = {
-                    "x": pos.x+Math.cos(rayAngle),
-                    "y": pos.y+Math.sin(rayAngle)
+                    "x": pos.x+(Math.cos(rayAngle)*step),
+                    "y": pos.y+(Math.sin(rayAngle)*step)
                 }
             }
         }
@@ -267,6 +269,10 @@ function keyDownHandler(e) {
         case 83: downIn = true; break;
         case 65: lookLeftIn = true; break;
         case 68: lookRightIn = true; break;
+        case 38: step++; break;
+        case 40: step--; if(step < 1) {step = 1} break;
+        case 39: brightness-=0.1; break;
+        case 37: brightness+=0.1; break;
         default: ;
     }
 }
@@ -293,6 +299,9 @@ function mouseDownHandler(e) {
                     mapTemplate[i][j]++;
                     if(mapTemplate[i][j] > 5) {
                         mapTemplate[i][j] = 0;
+                        if(i == 0 || j == 0 || i == dim-1 || j == dim-1) {
+                            mapTemplate[i][j] = 1;
+                        }
                     }
                     map = []
                     makeMap();
@@ -309,12 +318,12 @@ function drawScreen() {
     g.fillStyle = "skyblue"
     g.fillRect(800, 0, canvas.width-800, canvas.height/2);
     for(let i = 0; i < lengths.length; i++) {
-        let red = (lengths[i].red-lengths[i].distance/2)
-        let green = (lengths[i].green-lengths[i].distance/2)
-        let blue = (lengths[i].blue-lengths[i].distance/2)
+        let red = (lengths[i].red-lengths[i].distance*brightness/3)
+        let green = (lengths[i].green-lengths[i].distance*brightness/3)
+        let blue = (lengths[i].blue-lengths[i].distance*brightness/3)
         let color = "rgb("+red+","+green+","+blue+")"
         let w = ((canvas.width-800)/FOV)+2
-        let h = (55000/lengths[i].distance);
+        let h = (40000/lengths[i].distance);
         let y = 400-(h/2);
         let x = 800+(i*(w-2));
         g.fillStyle = color;
@@ -338,6 +347,9 @@ function animate() {
     g.moveTo(playerPos.x+5, playerPos.y+5);
     g.lineTo(playerPos.x+playerDeltaPos.x*25, playerPos.y+playerDeltaPos.y*25);
     g.stroke();
+    g.fillStyle = "white"
+    g.font = "16px Courier New"
+    g.fillText("Brightness: "+((brightness*-1)+0.6999), 800+10, 20);
     
 }
 
