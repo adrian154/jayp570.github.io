@@ -1,11 +1,11 @@
 let canvas = document.querySelector("canvas");
 
-canvas.width = 1900;
+canvas.width = 1800;
 canvas.height = 800;
 
 let g = canvas.getContext("2d");
 
-let dim = 10;
+let dim = 16;
 const TILESIZE = 800/dim;
 
 let showRays = false;
@@ -20,24 +20,50 @@ function Tile(x, y, num) {
         "x": x,
         "y": y
     }
+    this.red = 0;
+    this.green = 0;
+    this.blue = 0;
+    let channels = [0, 0, 0];
+    switch (num) {
+        case 1:
+            channels = [0, 255, 255];
+            break;
+        case 2:
+            channels = [255, 255, 0];
+            break;
+        case 3:
+            channels = [0, 255, 0];
+            break;
+        case 4:
+            channels = [255, 0, 0];
+            break;
+        case 5:
+            channels = [0, 0, 255];
+            break;
+        default:
+            break;
+    }
+    this.red = channels[0];
+    this.green = channels[1];
+    this.blue = channels[2]
+    this.color = "rgb("+this.red+","+this.green+","+this.blue+")"
+    
+    
     this.checkCollision = function(bX, bY, bW, bH) {
         let x = this.pos.x;
         let y = this.pos.y;
         let w = this.size;
         let h = this.size;
-        if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
+        if(x <= bX+bW && x+w >= bX && y <= bY+bH && y+h >= bY) {
             return true;
         }
         return false;
     }
     this.draw = function() {
-        if(num == 1) {
-            g.fillStyle = "white"
-        } else {
-            g.fillStyle = "black"
-        }
+        g.fillStyle = this.color;
         g.fillRect(this.pos.x+1, this.pos.y+1, this.size-1, this.size-1);
     }
+    
 }
 
 let mapTemplate = [];
@@ -80,13 +106,23 @@ let playerPos = {
     "x": 400,
     "y": 400
 }
+let playerAcc = {
+    "x": 0,
+    "y": 0
+}
+let playerVel = {
+    "x": 1,
+    "y": 1
+}
+const FRICTION = -0.5;
+const ACCELERATION = 2;
 
 let playerSpeed = 5;
 
 let playerLookAngle = 45;
 let playerDeltaPos = {
-    "x": Math.cos(playerLookAngle)*playerSpeed,
-    "y": Math.sin(playerLookAngle)*playerSpeed
+    "x": Math.cos(playerLookAngle),
+    "y": Math.sin(playerLookAngle)
 }
 let lookLeftIn = false;
 let lookRightIn = false;
@@ -98,15 +134,51 @@ let downIn = false;
 
 let FOV = 89;
 
+let previousPlayerPos = 0
+let frame = 0
+
+let w = 4;
+let h = 4;
 
 
 function updatePlayer() {
     playerDeltaPos = {
-        "x": Math.cos(playerLookAngle)*playerSpeed,
-        "y": Math.sin(playerLookAngle)*playerSpeed
+        "x": Math.cos(playerLookAngle),
+        "y": Math.sin(playerLookAngle)
     }
-    if(upIn) {playerPos.y+=playerDeltaPos.y; playerPos.x+=playerDeltaPos.x}
-    if(downIn) {playerPos.y-=playerDeltaPos.y; playerPos.x-=playerDeltaPos.x}
+
+    playerAcc.x = 0;
+    playerAcc.y = 0;
+    if(upIn) {
+        playerAcc.x = ACCELERATION;
+        playerAcc.y = ACCELERATION;
+    } else {
+        playerAcc.x = -ACCELERATION;
+        playerAcc.y = -ACCELERATION;
+    }
+
+    playerAcc.x += playerVel.x * FRICTION;
+    playerAcc.y += playerVel.y * FRICTION;
+    playerVel.x += playerAcc.x;
+    playerVel.y += playerAcc.y;
+    //console.log(playerVel.x+" "+playerDeltaPos.x);
+
+    if(upIn) {
+        playerPos.y+=(playerDeltaPos.y*playerVel.y); 
+        playerPos.x+=(playerDeltaPos.x*playerVel.x);
+    }
+    if(downIn) {
+        playerPos.y+=(playerDeltaPos.y*playerVel.y); 
+        playerPos.x+=(playerDeltaPos.x*playerVel.x);
+    }
+    for(let i = 0; i < map.length; i++) {
+        for(let j = 0; j < map[i].length; j++) {
+            if(map[i][j].checkCollision(playerPos.x+w/2, playerPos.y+h/2, w, h) && map[i][j].num > 0) {
+                console.log("hit");
+                playerPos = previousPlayerPos
+            }
+        }
+    }
     if(lookLeftIn) {
         playerLookAngle-=0.1; 
         if(playerLookAngle < 0) {
@@ -119,6 +191,11 @@ function updatePlayer() {
             playerLookAngle-=2*Math.PI
         }
     }
+    if(true) {
+        previousPlayerPos = JSON.parse(JSON.stringify(playerPos));
+    }
+    
+    frame++;
 }
 
 function drawPlayer() {
@@ -155,10 +232,16 @@ function drawRays(draw) {
             }
             for(let j = 0; j < map.length; j++) {
                 for(let k = 0; k < map[j].length; k++) {
-                    if(map[j][k].num == 1) {
-                        if(map[j][k].checkCollision(pos.x, pos.y, 1, 1)) {
+                    if(map[j][k].num > 0) {
+                        if(map[j][k].checkCollision(pos.x, pos.y, 1, 1) && map[j][k].num > 0) {
                             hitWall = true;
-                            lengths.push(length*(Math.cos(rayAngle-playerLookAngle)));
+                            lengths.push(   {
+                                    "distance": length*(Math.cos(rayAngle-playerLookAngle))*10000/10000,
+                                    "red": map[j][k].red,
+                                    "blue": map[j][k].blue,
+                                    "green": map[j][k].green
+                                }
+                            );
                             break;
                         }
                     }
@@ -206,14 +289,14 @@ function mouseDownHandler(e) {
     if(mouseX < 800 && mouseY < 800) {
         for(let i = 0; i < map.length; i++) {
             for(let j = 0; j < map[i].length; j++) {
-                if(map[i][j].checkCollision(mouseX, mouseY, 0, 0)) {
-                    if(mapTemplate[i][j] == 1) {
+                if(map[i][j].checkCollision(mouseX, mouseY, 0, 0) && map[i][j].checkCollision(playerPos.x+w/2, playerPos.y+h/2, w, h) == false) {
+                    mapTemplate[i][j]++;
+                    if(mapTemplate[i][j] > 5) {
                         mapTemplate[i][j] = 0;
-                    } else {
-                        mapTemplate[i][j] = 1;
                     }
                     map = []
                     makeMap();
+                    console.log(map);
                 }
             }
         }
@@ -226,12 +309,12 @@ function drawScreen() {
     g.fillStyle = "skyblue"
     g.fillRect(800, 0, canvas.width-800, canvas.height/2);
     for(let i = 0; i < lengths.length; i++) {
-        let red = (255-lengths[i]/2)
-        let green = (255-lengths[i]/2)
-        let blue = 0
+        let red = (lengths[i].red-lengths[i].distance/2)
+        let green = (lengths[i].green-lengths[i].distance/2)
+        let blue = (lengths[i].blue-lengths[i].distance/2)
         let color = "rgb("+red+","+green+","+blue+")"
         let w = ((canvas.width-800)/FOV)+2
-        let h = (55000/lengths[i]);
+        let h = (55000/lengths[i].distance);
         let y = 400-(h/2);
         let x = 800+(i*(w-2));
         g.fillStyle = color;
@@ -255,7 +338,6 @@ function animate() {
     g.moveTo(playerPos.x+5, playerPos.y+5);
     g.lineTo(playerPos.x+playerDeltaPos.x*25, playerPos.y+playerDeltaPos.y*25);
     g.stroke();
-    console.log(playerLookAngle);
     
 }
 
