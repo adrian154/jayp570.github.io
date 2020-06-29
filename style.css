@@ -1,67 +1,105 @@
-
 body {
-    margin-top: 10px;
-    width: 60%; 
-    margin-left: auto; 
-    margin-right: auto;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: rgb(1, 0, 0);
-    background-color: #f1f0f0;
+    margin: 0;
+    color: #111
+}
+
+
+
+.title {
     text-align: center;
-    user-select: none;
+    background-color: #222;
+    color: white;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    margin-bottom: 10px;
 }
 
-h1 {
-    border-bottom: 2px solid black;
-    padding-bottom: 30px;
-}
-
-.box {
-    text-align: left;
-    margin-top: 15px;
+.navSidebar {
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    width: 15%; /* Set the width of the sidebar */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 10; /* Stay on top */
+    top: 0; /* Stay at the top */
+    left: 0;
+    background-color: #e6e6e6; /* Black */
+    overflow-x: hidden; /* Disable horizontal scroll */
     padding: 20px;
-    background-color: white;
 }
 
-.headerButton {
-    color: black;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-weight: bold;
-    font-size: 23px;
-    padding: 12px;
-    padding-left: 50px;
-    padding-right: 50px;
-    border: 0px;
-    transition-duration: 500ms;
-    outline: none;
-    text-align: center;
-    margin-left: -3px;
-    margin-right: -3px; 
-    border-radius: 0px;
+.linkSidebar {
+    height: 100%; /* Full-height: remove this if you want "auto" height */
+    width: 15%; /* Set the width of the sidebar */
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 10; /* Stay on top */
+    top: 0; /* Stay at the top */
+    right: 0;
+    background-color: #e6e6e6; /* Black */
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding: 20px;
 }
 
 button {
-    background-color: rgb(48, 214, 48);
+    background-color: #111;
+    color: white;
     transition-duration: 0.3s; 
-    font-size: 18px;
-    font-weight: bold;
-    padding: 12px;
-    padding-left: 50px;
-    padding-right: 50px;
-    border-radius: 10px;
-    border: 0;
+    font-size: large;
+    padding: 10px;
+    border: 0px;
     outline: none;
+    width: 50%;
+    padding: 20px;
+    text-align: center;
+    margin-top: 15px;
+    margin-bottom: 15px;
 }
 
 button:hover {
     background-color: white;
+    color: #111;
 }
 
-button:active {
-    background-color: black;
+.sideButton {
+    background-color: #111;
+    color: white;
+    font-weight: bold;
+    font-size: large;
+    padding: 10px;
+    border: 0px;
+    outline: none;
+    width: 100%;
+    display: block;
+    padding: 20px;
+    text-align: center;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.sideButton:hover {
+    background-color: white;
+    color: #111;
+}
+
+.content {
+    margin-top: 100px;
+    margin-left: 24%;
+    margin-right: 24%;
+    text-align: center;
 }
 
 .linkImage {
-    width: 100px;
-    height: 100px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 60%;
+}
+
+.box {
+    background-color: #e6e6e6;
+    margin-bottom: 50px;
+    padding: 5px;
+}
+
+.contributorLink {
+    margin-bottom: 100px;
 }
