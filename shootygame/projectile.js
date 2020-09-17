@@ -34,6 +34,8 @@ class Projectile {
                 fadeOut: 0.05,
                 shrink: 0
             }, g))
+            this.w = 43
+            this.h = 19
         }
     }
 
@@ -51,7 +53,31 @@ class Projectile {
                 angle: this.angle,
                 continuous: false,
                 effectWidth: 100,
-                particleAmount: 15,
+                particleAmount: Math.round(getMagnitude(this.vel)),
+                size: [5, 15],
+                destroyTime: [0, 5],
+                colors: [object.hitColor] 
+            }, g))
+            return true;
+        }
+        return false;
+    }
+
+    checkCollisionPlayer(object) {
+        let bX = object.pos.x-object.size/2;
+        let bY = object.pos.y-object.size/2;
+        let bW = object.size*2;
+        let bH = object.size*2;
+        let x = this.pos.x;
+        let y = this.pos.y;
+        let w = this.w;
+        let h = this.h;
+        if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
+            particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
+                angle: this.angle,
+                continuous: false,
+                effectWidth: 100,
+                particleAmount: Math.round(getMagnitude(this.vel)),
                 size: [5, 15],
                 destroyTime: [0, 5],
                 colors: [object.hitColor] 
@@ -96,27 +122,31 @@ class Grenade extends Projectile{
             "x": 0,
             "y": 0
         }
+        this.w = 22
+        this.h = 26
+        this.timer = 0
     }
 
     update(offsetX, offsetY) {
         this.acc.x = 0; this.acc.y = 0;
-        this.acc.x += this.vel.x * FRICTION; this.acc.y += this.vel.y * FRICTION;
+        this.acc.x += this.vel.x * FRICTION/3; this.acc.y += this.vel.y * FRICTION/3;
         this.vel.x += this.acc.x; this.vel.y += this.acc.y;
         super.update(offsetX, offsetY)
+        this.timer++;
     }
 
 }
                                                                             
 
-function explode(bullet) {
+function explode(bullet, explosionForce) {
     for(let crateBlasted of crates) {
         if(getDist(crateBlasted, bullet) < 140) {
             crateBlasted.health -= 50
             let xDist = crateBlasted.pos.x+crateBlasted.w/2-bullet.pos.x
             let yDist = crateBlasted.pos.y+crateBlasted.h/2-bullet.pos.y
             let angle = Math.atan2(yDist, xDist)
-            crateBlasted.vel.x += Math.cos(angle)*40
-            crateBlasted.vel.y += Math.sin(angle)*40
+            crateBlasted.vel.x += Math.cos(angle)*explosionForce*(2/3)
+            crateBlasted.vel.y += Math.sin(angle)*explosionForce*(2/3)
         }
     }
     for(let playerBlasted of players) {
@@ -128,8 +158,8 @@ function explode(bullet) {
             let xDist = playerBlasted.pos.x+playerBlasted.size/2-bullet.pos.x
             let yDist = playerBlasted.pos.y+playerBlasted.size/2-bullet.pos.y
             let angle = Math.atan2(yDist, xDist)
-            playerBlasted.vel.x += Math.cos(angle)*60
-            playerBlasted.vel.y += Math.sin(angle)*60
+            playerBlasted.vel.x += Math.cos(angle)*explosionForce
+            playerBlasted.vel.y += Math.sin(angle)*explosionForce
         }
     }
 }
