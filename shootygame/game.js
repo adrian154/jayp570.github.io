@@ -11,8 +11,10 @@ crosshairImage.src = "assets/hud/crosshair.png"
 
 const TILESIZE = 125;
 
-const ACCELERATION = 0.75
+const ACCELERATION = 0.85
 const FRICTION = -0.1 //-0.05
+
+const DASHCOST = 30;
 
 const GUNNAMES = ["shotgun", "rocketlauncher"]
 
@@ -301,7 +303,7 @@ function Player(x, y, team) {
             if(this.input.down) {
                 this.vel.y = 30
             }
-            this.dashMeter-=50
+            this.dashMeter-=DASHCOST
             if(this.dashMeter < 0) {
                 this.dashMeter = 0
             }
@@ -402,7 +404,9 @@ function Player(x, y, team) {
         g.beginPath();
         g.arc(this.pos.x,this.pos.y,this.size,0,2*Math.PI,false);
         g.fill();
-        this.heldGun.draw()
+        if(this.heldGun != null) {
+            this.heldGun.draw()
+        }
     }
 
     this.drawHud = function() {
@@ -452,7 +456,7 @@ function Crate(x, y) {
     this.w = 60
     this.h = 60
 
-    this.health = 100;
+    this.health = 50;
 
     this.hitColor = "moccasin"
 
@@ -511,10 +515,9 @@ let particleEffects = []
 let players = [
     new Player(canvas.width/2, canvas.height/2, "red"),
     new Bot(1000, 100, "blue", 1),
-    //new Bot(1000, 300, "yellow", 2),
-    //new Bot(700, 100, "green", 3),
+    // new Bot(1000, 300, "yellow", 2),
+    // new Bot(700, 100, "green", 3),
     // new Bot(900, 300, "purple", 4),
-    // new Bot(800, 100, "orangered", 5),
     // new Bot(1000, 400, "white", 6),
 ]
 

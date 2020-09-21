@@ -149,7 +149,7 @@ function Bot(x, y, team, id) {
             if(this.input.down) {
                 this.vel.y = 30
             }
-            this.dashMeter-=50
+            this.dashMeter-=DASHCOST
             if(this.dashMeter < 0) {
                 this.dashMeter = 0
             }
@@ -166,6 +166,23 @@ function Bot(x, y, team, id) {
                 size: [7, 15],
                 shapes: ["circle"],
             }, g))
+        }
+    }
+
+    this.switchDirections = function() {
+        if(this.input.left) {
+            this.input.left = false;
+            this.input.right = true;
+        } else if(this.input.right) {
+            this.input.left = true;
+            this.input.right = false;
+        }
+        if(this.input.down) {
+            this.input.down = false;
+            this.input.up = true;
+        } else if(this.input.up) {
+            this.input.down = true;
+            this.input.up = false;
         }
     }
 
@@ -200,17 +217,29 @@ function Bot(x, y, team, id) {
     }
 
     this.aim = function() {
+        let trackingSpeed = 15;
+
         let target = this.findNearest(players)
         let distX = target.pos.x - this.pos.x
         let distY = target.pos.y - this.pos.y
-        let aimAngle = Math.atan2(distY, distX)*(180/Math.PI)
-        this.aimAngle = aimAngle
+        let newAimAngle = Math.atan2(distY, distX)*(180/Math.PI)
+        if(Math.abs(newAimAngle-this.aimAngle) > trackingSpeed) {
+            newAimAngle = this.aimAngle + ((newAimAngle/Math.abs(newAimAngle))*trackingSpeed)
+        }
+        this.aimAngle = newAimAngle
+    }
+
+    this.avoid = function() {
+        if(getDistPos(this.findNearest(players).pos, this.pos) < 160) {
+            this.switchDirections()
+        }
     }
 
     this.behave = function() {
         this.aim()
         this.shoot()
         this.goTo(this.findNearest(players).pos)
+        this.avoid()
     }
 
     this.update = function(offsetX, offsetY) {
@@ -300,7 +329,9 @@ function Bot(x, y, team, id) {
         g.beginPath();
         g.arc(this.pos.x,this.pos.y,this.size,0,2*Math.PI,false);
         g.fill();
-        this.heldGun.draw()
+        if(this.heldGun != null) {
+            this.heldGun.draw()
+        }
     }
 
     this.drawHud = function() {
