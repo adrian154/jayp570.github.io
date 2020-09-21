@@ -5,6 +5,10 @@ canvas.height = 720;
 
 let g = canvas.getContext("2d");
 
+let cursorPos = {x: 0, y: 0}
+let crosshairImage = new Image()
+crosshairImage.src = "assets/hud/crosshair.png"
+
 const TILESIZE = 125;
 
 const ACCELERATION = 0.75
@@ -169,15 +173,12 @@ function Player(x, y, team) {
     this.playerAngle = 0
     this.aimAngle = 0
 
-    this.gunInventory = []
-
     this.grenadeCount = 5
 
     this.bullets = []
     this.grenades = []
 
-    this.heldSlot = 0
-    this.heldGun = this.gunInventory[this.heldSlot]
+    this.heldGun = null;
 
     this.posOnMap = {
         x: this.pos.x-map.pos.x,
@@ -321,8 +322,11 @@ function Player(x, y, team) {
     }
 
     this.update = function() {
-        
-        this.heldGun = this.gunInventory[this.heldSlot]
+
+        this.pos = {
+            x: canvas.width/2,
+            y: canvas.height/2
+        }
 
         this.acc.x = 0; this.acc.y = 0;
         if(this.input.left) {
@@ -350,6 +354,10 @@ function Player(x, y, team) {
 
         if(this.health < 0) {
             this.health = 0
+            this.heldGun.carrier = null;
+            this.heldGun = null;
+            this.health = this.maxHealth
+            this.dashMeter = this.maxDashMeter
             particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
                 continuous: false,
                 particleAmount: 100,
@@ -360,30 +368,26 @@ function Player(x, y, team) {
                 size: [15, 25]
             }, g))
             playerRespawn(this.posOnMap.x, this.posOnMap.y, 300, 100)
-            this.health = this.maxHealth
-            this.dashMeter = this.maxDashMeter
+            this.vel = {x: 0, y: 0}
         }
 
         this.dashMeter += 1
         if(this.dashMeter > this.maxDashMeter) {
             this.dashMeter = this.maxDashMeter
         }
-
-        this.heldGun.frame++
     }
 
     this.updateItems = function() {
-        for(let item of this.gunInventory) {
-            item.update(0, 0)
-            this.gunInventory[this.heldSlot].angle = this.aimAngle
-        }
+        this.heldGun.update(0, 0)
+        this.heldGun.angle = this.aimAngle
+        this.heldGun.frame++;
 
         for(let bullet of this.bullets) {
-            bullet.update(this.vel.x, this.vel.y)
+            bullet.update(players[0].vel.x, players[0].vel.y)
         }
 
         for(let grenade of this.grenades) {
-            grenade.update(this.vel.x, this.vel.y)
+            grenade.update(players[0].vel.x, players[0].vel.y)
         }
     }
 
@@ -398,18 +402,24 @@ function Player(x, y, team) {
         g.beginPath();
         g.arc(this.pos.x,this.pos.y,this.size,0,2*Math.PI,false);
         g.fill();
-        this.gunInventory[this.heldSlot].draw()
+        this.heldGun.draw()
     }
 
     this.drawHud = function() {
-        g.fillStyle = "red"
-        g.fillRect(10, canvas.height-90, this.maxHealth*4, 35)
-        g.fillStyle = "green"
+        g.globalAlpha = 0.6
+        g.fillStyle = "black"
+        g.fillRect(10-4, canvas.height-90-4, 8+this.maxHealth*4, 35+8)
+        g.globalAlpha = 1.0
+        g.fillStyle = "lime"
         g.fillRect(10, canvas.height-90, this.health*4, 35)
-        g.fillStyle = "white"
-        g.fillRect(10, canvas.height-50, this.maxDashMeter*3, 25)
+
+        g.globalAlpha = 0.6
+        g.fillStyle = "black"
+        g.fillRect(10-3, canvas.height-40-3, 6+this.maxDashMeter*3, 25+6)
+        g.globalAlpha = 1.0
         g.fillStyle = "cyan"
-        g.fillRect(10, canvas.height-50, this.dashMeter*3, 25)
+        g.fillRect(10, canvas.height-40, this.dashMeter*3, 25)
+
         g.fillStyle = "white"
         g.font = "bold 40px consolas"
         g.fillText(this.heldGun.clip+"/"+this.heldGun.maxClip, canvas.width-150, canvas.height-40) 
@@ -501,115 +511,18 @@ let particleEffects = []
 let players = [
     new Player(canvas.width/2, canvas.height/2, "red"),
     new Bot(1000, 100, "blue", 1),
-    new Bot(1000, 300, "yellow", 2),
-    new Bot(700, 100, "orange", 3),
+    //new Bot(1000, 300, "yellow", 2),
+    //new Bot(700, 100, "green", 3),
     // new Bot(900, 300, "purple", 4),
-    // new Bot(800, 100, "green", 5),
+    // new Bot(800, 100, "orangered", 5),
     // new Bot(1000, 400, "white", 6),
 ]
 
 let items = []
 
-for(let player of players) {
-    items.push(new Gun(0, 0, "pistol"))
-}
-for(let i = 0; i < players.length; i++) {
-    players[i].gunInventory.push(items[i])
-    items[i].carrier = players[i]
-}
-
 let crates = [
     new Crate(100, 100), new Crate(200, 100)
 ]
-
-
-window.addEventListener('keydown', keyDownHandler, false);
-window.addEventListener('keyup', keyUpHandler, false);
-window.addEventListener('mousemove', mouseMoveHandler, false);
-window.addEventListener('mousedown', mouseDownHandler, false);
-window.addEventListener('wheel', scrollHandler, false);
-
-function keyDownHandler(e) {
-
-    let player = players[0]
-
-    let code = e.keyCode;
-    player.setDirection(code,true);
-
-    //dash
-    if(code == 32) {
-        players[0].dash()
-    }
-
-    //pick up weapon
-    if(code == 69 && player.gunInventory.length < 2) {
-        for(let item of items) {
-            if(item.carrier == null) {
-                if(getDist(player, item) < 110) {
-                    item.carrier = player
-                    player.gunInventory.push(item)
-                    for(let i = 0; i < player.gunInventory.length; i++) {
-                        if(player.gunInventory[i].name == "pistol") {
-                            player.gunInventory.splice(i, 1)
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    //reload weopon
-    if(code == 82 && player.heldGun.reloading == false && player.heldGun.clip < player.heldGun.maxClip) {
-        player.heldGun.reloadStartFrame = player.heldGun.frame
-    }
-
-    //switch weapon
-    if(players[0].gunInventory.length > 1) {
-        if(code == 49) {
-            players[0].heldSlot = 0
-        }
-        if(code == 50) {
-            players[0].heldSlot = 1
-        }
-    }
-
-    //throw grenade
-    if(code == 71) {
-        player.throwGrenade()
-    }
-}
-
-function keyUpHandler(e) {
-    let code = e.keyCode;
-    players[0].setDirection(code,false);
-}
-
-function mouseMoveHandler(e) {
-    let rect = canvas.getBoundingClientRect();
-    let mouseX = event.clientX - rect.left;
-    let mouseY = event.clientY - rect.top;
-    let playerX = players[0].pos.x; let playerY = players[0].pos.y;
-    let x = playerX-mouseX; let y = playerY-mouseY;
-    players[0].aimAngle = Math.atan2(-y, -x)*(180/Math.PI)
-}
-
-function mouseDownHandler(e) {
-    players[0].shoot()
-}
-
-function scrollHandler(e) {
-    if(players[0].gunInventory.length > 1) {
-        let playerLookAngle = players[0].gunInventory[players[0].heldSlot].angle
-        if(players[0].heldSlot == 0) {
-            players[0].heldSlot = 1
-            players[0].gunInventory[players[0].heldSlot].angle = playerLookAngle
-        } else if(players[0].heldSlot == 1) {
-            players[0].heldSlot = 0
-            players[0].gunInventory[players[0].heldSlot].angle = playerLookAngle
-        }
-    }
-}
 
 let frame = 0
 
@@ -636,6 +549,9 @@ function playerRespawn(playerX, playerY, respawnX, respawnY) {
         if(player.id != 0) {
             player.pos.x += x; player.pos.y += y
         }
+        for(let bullet of player.bullets) {
+            bullet.pos.x += x; bullet.pos.y += y;
+        }
     }
 
     for(let item of items) {
@@ -660,6 +576,22 @@ function animate() {
 	
     //updates map
     map.update(players[0].vel.x, players[0].vel.y)
+
+    //makes sure players have a gun
+    for(let player of players) {
+        if(player.heldGun == null) {
+            items.push(new Gun(0, 0, "pistol"))
+            items[items.length-1].carrier = player
+            player.heldGun = items[items.length-1]
+        }
+    }
+
+    //makes sure there are no unused guns
+    for(let i = 0; i < items.length; i++) {
+        if(items[i].name == "pistol" && items[i].carrier == null) {
+            items.splice(i, 1)
+        }
+    }
 
     //checks crate collision with walls
     for(let crate of crates) {
@@ -899,12 +831,8 @@ function animate() {
             crate.draw()
         }
 
-        for(let player of players) {
-            player.drawHud()
-        }
-
         //displays pick up prompt
-        if(players[0].gunInventory.length < 2) {
+        if(players[0].heldGun.name == "pistol") {
             for(let item of items) {
                 if(item.carrier == null) {
                     if(getDist(players[0], item) < 110) {
@@ -915,11 +843,18 @@ function animate() {
                 }
             }
         }
-        
 
+        for(let player of players) {
+            player.drawHud()
+        }
+        
         for(let effect of particleEffects) {
             effect.update(g)
         }
+
+        //draws crosshair
+        g.fillStyle = "white"
+        g.drawImage(crosshairImage, cursorPos.x-12, cursorPos.y-12)
 
     }
 

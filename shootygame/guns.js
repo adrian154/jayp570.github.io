@@ -42,7 +42,7 @@ const GUNINFO = {
     "pistol": {
         reloadSpeed: 100,
         maxClip: 12,
-        rateOfFire: 2
+        rateOfFire: 8
     },
     "shotgun": {
         reloadSpeed: 100,

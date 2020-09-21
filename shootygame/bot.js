@@ -33,15 +33,13 @@ function Bot(x, y, team, id) {
     this.playerAngle = 0
     this.aimAngle = 0
 
-    this.gunInventory = []
-
     this.grenadeCount = 5
 
     this.bullets = []
     this.grenades = []
 
     this.heldSlot = 0
-    this.heldGun = this.gunInventory[this.heldSlot]
+    this.heldGun = null;
 
     this.posOnMap = {
         x: this.pos.x-map.pos.x,
@@ -211,13 +209,11 @@ function Bot(x, y, team, id) {
 
     this.behave = function() {
         this.aim()
+        this.shoot()
         this.goTo(this.findNearest(players).pos)
     }
 
     this.update = function(offsetX, offsetY) {
-        
-        this.heldGun = this.gunInventory[this.heldSlot]
-
         this.behave()
 
         this.acc.x = 0; this.acc.y = 0;
@@ -244,7 +240,6 @@ function Bot(x, y, team, id) {
             y: this.pos.y-map.pos.y
         }
 
-        console.log(this.input)
 
         this.input.right = false;
         this.input.left = false;
@@ -255,6 +250,10 @@ function Bot(x, y, team, id) {
 
         if(this.health < 0) {
             this.health = 0
+            this.heldGun.carrier = null;
+            this.heldGun = null;
+            this.health = this.maxHealth
+            this.dashMeter = this.maxDashMeter
             particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
                 continuous: false,
                 particleAmount: 100,
@@ -267,30 +266,26 @@ function Bot(x, y, team, id) {
             //respawn
             let respawnX = 500; let respawnY = 100;
             this.pos.x -= this.posOnMap.x - respawnX; this.pos.y -= this.posOnMap.y - respawnY; 
-            this.health = this.maxHealth
-            this.dashMeter = this.maxDashMeter
+            this.vel = {x: 0, y: 0}
         }
 
         this.dashMeter += 1
         if(this.dashMeter > this.maxDashMeter) {
             this.dashMeter = this.maxDashMeter
         }
-
-        this.heldGun.frame++
     }
 
     this.updateItems = function() {
-        for(let item of this.gunInventory) {
-            item.update(0, 0)
-            this.gunInventory[this.heldSlot].angle = this.aimAngle
-        }
+        this.heldGun.update(0, 0)
+        this.heldGun.angle = this.aimAngle
+        this.heldGun.frame++;
 
         for(let bullet of this.bullets) {
-            bullet.update(this.vel.x, this.vel.y)
+            bullet.update(players[0].vel.x, players[0].vel.y)
         }
 
         for(let grenade of this.grenades) {
-            grenade.update(this.vel.x, this.vel.y)
+            grenade.update(players[0].vel.x, players[0].vel.y)
         }
     }
 
@@ -305,13 +300,15 @@ function Bot(x, y, team, id) {
         g.beginPath();
         g.arc(this.pos.x,this.pos.y,this.size,0,2*Math.PI,false);
         g.fill();
-        this.gunInventory[this.heldSlot].draw()
+        this.heldGun.draw()
     }
 
     this.drawHud = function() {
-        g.fillStyle = "red"
-        g.fillRect(this.pos.x-this.maxHealth/3, this.pos.y-40, this.maxHealth/1.5, 10)
-        g.fillStyle = "green"
+        g.globalAlpha = 0.6
+        g.fillStyle = "black"
+        g.fillRect(-2+this.pos.x-this.maxHealth/3, -2+this.pos.y-40, 4+this.maxHealth/1.5, 4+10)
+        g.globalAlpha = 1.0
+        g.fillStyle = "lime"
         g.fillRect(this.pos.x-this.maxHealth/3, this.pos.y-40, this.health/1.5, 10)
     }
 }
