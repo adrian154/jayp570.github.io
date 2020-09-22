@@ -217,14 +217,20 @@ function Bot(x, y, team, id) {
     }
 
     this.aim = function() {
-        let trackingSpeed = 15;
+        let trackingSpeed = 5;
 
         let target = this.findNearest(players)
         let distX = target.pos.x - this.pos.x
         let distY = target.pos.y - this.pos.y
         let newAimAngle = Math.atan2(distY, distX)*(180/Math.PI)
-        if(Math.abs(newAimAngle-this.aimAngle) > trackingSpeed) {
-            newAimAngle = this.aimAngle + ((newAimAngle/Math.abs(newAimAngle))*trackingSpeed)
+        if(newAimAngle < 0) {
+            newAimAngle += 360
+        } 
+        console.log(newAimAngle+" "+players[0].aimAngle)
+        if(newAimAngle - this.aimAngle < 0 && newAimAngle - this.aimAngle < -trackingSpeed) {
+            newAimAngle = this.aimAngle - trackingSpeed
+        } else if(newAimAngle - this.aimAngle > 0 && newAimAngle - this.aimAngle > trackingSpeed) {
+            newAimAngle = this.aimAngle + trackingSpeed
         }
         this.aimAngle = newAimAngle
     }
