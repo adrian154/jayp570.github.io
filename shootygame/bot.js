@@ -288,19 +288,19 @@ function Bot(x, y, team, id) {
     this.behave = function() {
         this.aim()
         // this.shoot()
-        this.goTo(this.findNearest(players).pos)
+        // this.goTo(this.findNearest(players).pos)
         // this.avoid()
     }
 
     this.collisionReaction = function(collisionAngle) {
         if(collisionAngle >= 45 && collisionAngle <= 135) {
-            this.vel.y *= -1
+            this.vel.y *= -1.1
         } else if(collisionAngle <= 315 && collisionAngle >= 225) {
-            this.vel.y *= -1
+            this.vel.y *= -1.1
         } else if(collisionAngle > 135 && collisionAngle < 225) {
-            this.vel.x *= -1
+            this.vel.x *= -1.1
         } else {
-            this.vel.x *= -1
+            this.vel.x *= -1.1
         }
     }
 
