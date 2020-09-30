@@ -16,7 +16,7 @@ const FRICTION = -0.1 //-0.05
 
 const DASHCOST = 30;
 
-const GUNNAMES = ["shotgun", "rocketlauncher"]
+const GUNNAMES = ["shotgun", "rocketlauncher", "grenadelauncher"]
 
 let rawMap = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -26,7 +26,7 @@ let rawMap = [
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41,42 +41,32 @@ let rawMap = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ]
 
-function getDist(a, b) {
-    let distX = b.pos.x - a.pos.x
-    let distY = b.pos.y - a.pos.y
-    let dist = Math.sqrt(Math.pow(distX, 2)+Math.pow(distY, 2))
-    return dist
+
+const EXPLOSIONPARTICLES =  {
+    speed: [1, 10], 
+    size: [1, 70],
+    shapes: ["circle"],
+    effectWidth: 360,
+    destroyTime: [5, 15],
+    fadeOut: 0,
+    shrink: 6,
+    angle: 90,
+    colors: ["yellow", "darkorange", "orange", "gray", "darkgray", "red"],
+    particleAmount: 100,
+    continuous: false,
+    effectVel: {x: 0, y: 0},
+    glowAmount: 20
 }
 
-function getDistPos(posA, posB) {
-    let distX = posB.x - posA.x
-    let distY = posB.y - posA.y
-    let dist = Math.sqrt(Math.pow(distX, 2)+Math.pow(distY, 2))
-    return dist
-}
-
-function getMagnitude(vector) {
-    let x = vector.x;
-    let y = vector.y;
-    let mag = Math.sqrt(Math.pow(x, 2)+Math.pow(y, 2))
-    return mag
-}
-
-function getExplosionParticles() {
-    return {
-        speed: [1, 10], 
-        size: [1, 70],
-        shapes: ["circle"],
-        effectWidth: 360,
-        destroyTime: [5, 5],
-        fadeOut: 0,
-        shrink: 6,
-        angle: 90,
-        colors: ["yellow", "darkorange", "orange", "gray", "darkgray", "red"],
-        particleAmount: 100,
-        continuous: false,
-        effectVel: {x: 0, y: 0}
-    }
+const MUZZLEFLASHPARTICLES = {
+    destroyTime: [0, 0],
+    effectWidth: 360,
+    continuous: false,
+    speed: [0, 5],
+    particleAmount: 20,
+    shrink: 3,
+    colors: ["yellow", "orange", "gold"],
+    glowAmount: 10
 }
 
 function Tile(x, y, state) {
@@ -175,7 +165,7 @@ function Player(x, y, team) {
     this.playerAngle = 0
     this.aimAngle = 0
 
-    this.grenadeCount = 5
+    this.grenadeCount = 1000
 
     this.bullets = []
     this.grenades = []
@@ -222,9 +212,10 @@ function Player(x, y, team) {
         if(this.heldGun.clip > 0 && this.heldGun.reloading == false && this.heldGun.canFire) {
 
             let firePoint = {
-                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*60),
-                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*60)
+                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*55),
+                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*55)
             }
+
             if(this.heldGun.name == "pistol") {
                 this.bullets.push(new Projectile(
                     "assets/projectiles/bullet.png", 
@@ -251,17 +242,39 @@ function Player(x, y, team) {
                     }
                 }
             } else if(this.heldGun.name == "rocketlauncher") {
+                firePoint = {
+                    x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*100),
+                    y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*100)
+                }
                 this.bullets.push(new Projectile(
                     "assets/projectiles/rocket.png", 
                     firePoint.x, firePoint.y,
                     this.id, 
                     this.aimAngle, 
-                    12, 
+                    4, 
                     25
                 ))
                 this.vel.x -= this.bullets[this.bullets.length-1].vel.x/3
                 this.vel.y -= this.bullets[this.bullets.length-1].vel.y/3
+            } else if(this.heldGun.name == "grenadelauncher") {
+                firePoint = {
+                    x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*100),
+                    y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*100)
+                }
+                this.grenades.push(new Grenade(
+                    "assets/projectiles/grenade.png", 
+                    firePoint.x, 
+                    firePoint.y,
+                    this.id,
+                    this.aimAngle,
+                    30,
+                    5
+                ))
+                this.vel.x -= this.grenades[this.grenades.length-1].vel.x/4
+                this.vel.y -= this.grenades[this.grenades.length-1].vel.y/4
             }
+
+            particleEffects.push(new ParticleEffect(firePoint.x, firePoint.y, MUZZLEFLASHPARTICLES, g))
 
             this.heldGun.lastShot = this.heldGun.frame
 
@@ -271,6 +284,27 @@ function Player(x, y, team) {
 
         if(this.heldGun.clip == 0 && this.heldGun.reloading == false) {
             this.heldGun.reloadStartFrame = this.heldGun.frame
+        }
+    }
+
+    this.throwWeapon = function() {
+
+        if(this.heldGun.name != "pistol") {
+            let firePoint = {
+                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*55),
+                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*55)
+            }
+    
+            this.bullets.push(new ThrownWeapon(
+                this.heldGun.image.src,
+                firePoint.x, firePoint.y,
+                this.id,
+                this.aimAngle,
+                20,
+                50
+            ))
+    
+            this.heldGun = null
         }
     }
 
@@ -323,6 +357,18 @@ function Player(x, y, team) {
         }
     }
 
+    this.collisionReaction = function(collisionAngle) {
+        if(collisionAngle >= 45 && collisionAngle <= 135) {
+            this.vel.y *= -1
+        } else if(collisionAngle <= 315 && collisionAngle >= 225) {
+            this.vel.y *= -1
+        } else if(collisionAngle > 135 && collisionAngle < 225) {
+            this.vel.x *= -1
+        } else {
+            this.vel.x *= -1
+        }
+    }
+
     this.update = function() {
 
         this.pos = {
@@ -354,7 +400,7 @@ function Player(x, y, team) {
 
         //this.playerAngle = Math.atan2(this.vel.y, this.vel.x) * (180/Math.PI)
 
-        if(this.health < 0) {
+        if(this.health <= 0) {
             this.health = 0
             this.heldGun.carrier = null;
             this.heldGun = null;
@@ -412,14 +458,14 @@ function Player(x, y, team) {
     this.drawHud = function() {
         g.globalAlpha = 0.6
         g.fillStyle = "black"
-        g.fillRect(10-4, canvas.height-90-4, 8+this.maxHealth*4, 35+8)
+        g.fillRect(10, canvas.height-90, this.maxHealth*4, 35)
         g.globalAlpha = 1.0
         g.fillStyle = "lime"
         g.fillRect(10, canvas.height-90, this.health*4, 35)
 
         g.globalAlpha = 0.6
         g.fillStyle = "black"
-        g.fillRect(10-3, canvas.height-40-3, 6+this.maxDashMeter*3, 25+6)
+        g.fillRect(10, canvas.height-40, this.maxDashMeter*3, 25)
         g.globalAlpha = 1.0
         g.fillStyle = "cyan"
         g.fillRect(10, canvas.height-40, this.dashMeter*3, 25)
@@ -435,75 +481,6 @@ function Player(x, y, team) {
             g.fillRect((canvas.width/2)-reloadBarLength/2, 10, reloadBarLength, 15)  
         }
     }
-}
-
-
-function Crate(x, y) {
-
-    this.pos = {
-        x: x,
-        y: y
-    }
-    this.vel = {
-        x: 0,
-        y: 0
-    }
-    this.acc = {
-        x: 0,
-        y: 0
-    }
-
-    this.w = 60
-    this.h = 60
-
-    this.health = 50;
-
-    this.hitColor = "moccasin"
-
-    this.checkCollision = function(object) {
-        let bX = object.pos.x;
-        let bY = object.pos.y;
-        let bW = object.w;
-        let bH = object.w;
-        let x = this.pos.x;
-        let y = this.pos.y;
-        let w = this.w;
-        let h = this.h;
-        if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
-            return true;
-        }
-        return false;
-    }
-
-    this.draw = function() {
-        g.fillStyle = "moccasin"
-        if(this.health > 0) {
-            g.fillRect(this.pos.x, this.pos.y, this.w, this.h)
-        }
-    }
-
-    this.update = function(offsetX, offsetY) {
-        this.acc.x = 0; this.acc.y = 0;
-        this.acc.x += this.vel.x * FRICTION;    this.acc.y += this.vel.y * FRICTION;
-        this.vel.x += this.acc.x;               this.vel.y += this.acc.y;
-        this.pos.x += this.vel.x;               this.pos.y += this.vel.y;
-
-        this.pos.x -= offsetX; this.pos.y -= offsetY;
-
-        if(this.health <= 0) {
-            particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
-                continuous: false,
-                particleAmount: 100,
-                effectWidth: 360,
-                colors: ["moccasin"],
-                destroyTime: [0, 0],
-                speed: [15, 20],
-                size: [15, 25]
-            }, g))
-            items.push(new Gun(this.pos.x, this.pos.y, GUNNAMES[Math.floor(Math.random()*GUNNAMES.length)]))
-        }
-    }
-
 }
 
 
@@ -527,6 +504,13 @@ let crates = [
     new Crate(100, 100), new Crate(200, 100)
 ]
 
+let explosiveBarrels = [
+    new ExplosiveBarrel(100, 200),
+    new ExplosiveBarrel(100, 400),
+    new ExplosiveBarrel(100, 600),
+    new ExplosiveBarrel(100, 800)
+]
+
 let frame = 0
 
 
@@ -548,12 +532,22 @@ function playerRespawn(playerX, playerY, respawnX, respawnY) {
         crate.pos.x += x; crate.pos.y += y;
     }
 
+    for(let explosiveBarrel of explosiveBarrels) {
+        explosiveBarrel.pos.x += x; explosiveBarrel.pos.y += y;
+    }
+
     for(let player of players) {
         if(player.id != 0) {
             player.pos.x += x; player.pos.y += y
         }
         for(let bullet of player.bullets) {
             bullet.pos.x += x; bullet.pos.y += y;
+            for(let effect of bullet.particleEffects) { 
+                effect.pos.x += x; effect.pos.y += y
+            }
+        }
+        for(let grenade of player.grenades) {
+            grenade.pos.x += x; grenade.pos.y += y;
         }
     }
 
@@ -613,13 +607,39 @@ function animate() {
     }
 
     //updates crates and deletes destroyed crates
-    let count = 0
-    for(let crate of crates) {
+    for(let i = 0; i < crates.length; i++) {
+        let crate = crates[i]
         crate.update(players[0].vel.x, players[0].vel.y)
         if(crate.health <= 0) {
-            crates.splice(count, 1)        
+            crates.splice(i, 1)
         }
-        count++
+    }
+
+    //checks explosive barrel collision with walls
+    for(let explosiveBarrel of explosiveBarrels) {
+        outerWallLoop:
+        for(let i = 0; i < map.map.length; i++) {
+            for(let j = 0; j < map.map[i].length; j++) {
+                if(map.map[i][j].state == 1) {
+                    if(explosiveBarrel.checkCollision(map.map[i][j])) {
+                        explosiveBarrel.vel.x*=-1; explosiveBarrel.vel.y*=-1;
+                        break outerWallLoop;
+                    }
+                }
+                
+            }
+        }
+    }
+
+    //updates explosive barrels and deletes destroyed explosive barrels
+    for(let i = 0; i < explosiveBarrels.length; i++) {
+        let explosiveBarrel = explosiveBarrels[i]
+        explosiveBarrel.update(players[0].vel.x, players[0].vel.y)
+        if(explosiveBarrel.health <= 0) {
+            particleEffects.push(new ParticleEffect(explosiveBarrel.pos.x, explosiveBarrel.pos.y, EXPLOSIONPARTICLES, g))
+            explode(explosiveBarrel, 60)
+            explosiveBarrels.splice(i, 1)
+        }
     }
 
     //updates items
@@ -683,7 +703,7 @@ function animate() {
         for(let num = 0; num < player.grenades.length; num++) {
             let grenade = player.grenades[num]
             if(grenade.timer > 200) {
-                particleEffects.push(new ParticleEffect(grenade.pos.x, grenade.pos.y, getExplosionParticles(), g))
+                particleEffects.push(new ParticleEffect(grenade.pos.x, grenade.pos.y, EXPLOSIONPARTICLES, g))
                 player.grenades.splice(num, 1)
                 explode(grenade, 30)
             }
@@ -708,7 +728,8 @@ function animate() {
             for(let j = 0; j < map.map[i].length; j++) {
                 if(map.map[i][j].state == 1) {
                     if(player.checkCollision(map.map[i][j])) {
-                        player.vel.x*=-1; player.vel.y*=-1;
+                        let collisionAngle = getCollisionAngle(map.map[i][j], player)
+                        player.collisionReaction(collisionAngle)
                         break outerWallLoop;
                     }
                 }
@@ -723,6 +744,13 @@ function animate() {
                 if(player.vel.x + player.vel.y >= 20) {
                     crate.health-=50
                 }
+            }
+        }
+
+        //checks player collision with explosive barrels
+        for(let explosiveBarrel of explosiveBarrels) {
+            if(player.checkCollision(explosiveBarrel)) {
+                explosiveBarrel.vel.x += player.vel.x*1.25; explosiveBarrel.vel.y += player.vel.y*1.25;
             }
         }
 
@@ -743,7 +771,7 @@ function animate() {
                     if(map.map[i][j].state == 1) {
                         if(bullet.checkCollision(map.map[i][j])) {
                             if(bullet.name == "rocket") {
-                                particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, getExplosionParticles(), g))
+                                particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, EXPLOSIONPARTICLES, g))
                                 explode(bullet, 60)
                             }
                             player.bullets.splice(num, 1)
@@ -759,9 +787,22 @@ function animate() {
                     crate.health -= bullet.damage
                     crate.vel.x += bullet.vel.x/4; crate.vel.y += bullet.vel.y/4
                     if(bullet.name == "rocket") {
-                        particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, getExplosionParticles(), g))
+                        particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, EXPLOSIONPARTICLES, g))
                         explode(bullet, 60)
                     }
+                    player.bullets.splice(num, 1)
+                }
+            }
+
+            //checks bullet collision with explosive barrels
+            for(let i = 0; i < explosiveBarrels.length; i++) {
+                let explosiveBarrel = explosiveBarrels[i]
+                if(bullet.checkCollision(explosiveBarrel)) {
+                    if(bullet.name == "rocket") {
+                        particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, EXPLOSIONPARTICLES, g))
+                        explode(bullet, 60)
+                    }
+                    explosiveBarrel.health = 0
                     player.bullets.splice(num, 1)
                 }
             }
@@ -773,7 +814,7 @@ function animate() {
                         hitPlayer.health -= bullet.damage
                         hitPlayer.vel.x += bullet.vel.x/7; hitPlayer.vel.y += bullet.vel.y/7
                         if(bullet.name == "rocket") {
-                            particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, getExplosionParticles(), g))
+                            particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, EXPLOSIONPARTICLES, g))
                             explode(bullet, 60)
                         }
                         player.bullets.splice(num, 1)
@@ -793,17 +834,29 @@ function animate() {
                 for(let j = 0; j < map.map[i].length; j++) {
                     if(map.map[i][j].state == 1) {
                         if(grenade.checkCollision(map.map[i][j])) {
-                            grenade.vel.x *= -1; grenade.vel.y *= -1;
+                            let collisionAngle = getCollisionAngle(map.map[i][j], grenade)
+                            grenade.collisionReaction(collisionAngle)
                             break outerWallLoop;
                         }
                     }
                 }
             }
 
+            //checks grenade collision with crates
             for(let crate of crates) {
                 if(grenade.checkCollision(crate)) {
-                    crate.health -= 5
-                    grenade.vel.x *= -1; grenade.vel.y *= -1;
+                    crate.health -= grenade.damage
+                    let collisionAngle = getCollisionAngle(crate, grenade)
+                    grenade.collisionReaction(collisionAngle)
+                }
+            }
+
+            //checks grenade collision with explosive barrels
+            for(let explosiveBarrel of explosiveBarrels) {
+                if(grenade.checkCollision(explosiveBarrel)) {
+                    explosiveBarrel.health -= grenade.damage
+                    let collisionAngle = getCollisionAngle(explosiveBarrel, grenade)
+                    grenade.collisionReaction(collisionAngle)
                 }
             }
         }
@@ -834,6 +887,10 @@ function animate() {
             crate.draw()
         }
 
+        for(let explosiveBarrel of explosiveBarrels) {
+            explosiveBarrel.draw()
+        }
+
         //displays pick up prompt
         if(players[0].heldGun.name == "pistol") {
             for(let item of items) {
@@ -846,13 +903,13 @@ function animate() {
                 }
             }
         }
-
-        for(let player of players) {
-            player.drawHud()
-        }
         
         for(let effect of particleEffects) {
             effect.update(g)
+        }
+
+        for(let player of players) {
+            player.drawHud()
         }
 
         //draws crosshair

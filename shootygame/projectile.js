@@ -26,7 +26,6 @@ class Projectile {
     
         if(this.name == "rocket") {
             this.particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
-                effectVel: {x: this.vel.x, y: this.vel.y},
                 angle: this.angle,
                 particleAmount: 1,
                 destroyTime: [0, 0],
@@ -44,8 +43,8 @@ class Projectile {
         let bY = object.pos.y;
         let bW = object.w;
         let bH = object.h;
-        let x = this.pos.x;
-        let y = this.pos.y;
+        let x = this.pos.x-this.w/2;
+        let y = this.pos.y-this.h/2;
         let w = this.w;
         let h = this.h;
         if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
@@ -53,7 +52,7 @@ class Projectile {
                 angle: this.angle,
                 continuous: false,
                 effectWidth: 100,
-                particleAmount: Math.round(getMagnitude(this.vel)),
+                particleAmount: Math.round(getMagnitude(this.vel))/3,
                 size: [5, 15],
                 destroyTime: [0, 5],
                 colors: [object.hitColor] 
@@ -68,8 +67,8 @@ class Projectile {
         let bY = object.pos.y-object.size/2;
         let bW = object.size*2;
         let bH = object.size*2;
-        let x = this.pos.x;
-        let y = this.pos.y;
+        let x = this.pos.x-this.w/2;
+        let y = this.pos.y-this.h/2;
         let w = this.w;
         let h = this.h;
         if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
@@ -90,6 +89,9 @@ class Projectile {
     update(offsetX, offsetY) {
         this.pos.x += this.vel.x; this.pos.y += this.vel.y;
         this.pos.x -= offsetX; this.pos.y -= offsetY;
+        if(this.name == "rocket" && getMagnitude(this.vel) < 15) {
+            this.vel.x *= 1.04; this.vel.y *= 1.04
+        }
         for(let effect of this.particleEffects) {
             effect.pos.x -= offsetX
             effect.pos.y -= offsetY
@@ -101,23 +103,25 @@ class Projectile {
     }
 
     draw() {
-        g.translate(this.pos.x, this.pos.y)
-        g.rotate(this.angle*Math.PI/180)
-        g.drawImage(this.image, -this.image.width+this.w, -this.image.height+this.h)
-        g.rotate(-this.angle*Math.PI/180)
-        g.translate(-this.pos.x, -this.pos.y)
         for(let effect of this.particleEffects) {
             effect.update()
+            effect.pos = JSON.parse(JSON.stringify(this.pos))
         }
+        g.translate(this.pos.x, this.pos.y)
+        g.rotate(this.angle*Math.PI/180)
+        g.drawImage(this.image, -this.image.width+this.w/2, -this.image.height+this.h/2)
+        g.rotate(-this.angle*Math.PI/180)
+        g.translate(-this.pos.x, -this.pos.y)
     }
 
 }
 
 
-class Grenade extends Projectile{
+class Grenade extends Projectile {
 
     constructor(imagePath, x, y, id, angle, speed, damage) {
         super(imagePath, x, y, id, angle, speed, damage)
+        this.angleThrown = angle;
         this.acc = {
             "x": 0,
             "y": 0
@@ -127,16 +131,58 @@ class Grenade extends Projectile{
         this.timer = 0
     }
 
+    collisionReaction(collisionAngle) {
+        if(collisionAngle >= 45 && collisionAngle <= 135) {
+            this.vel.y *= -1
+        } else if(collisionAngle <= 315 && collisionAngle >= 225) {
+            this.vel.y *= -1
+        } else if(collisionAngle > 135 && collisionAngle < 225) {
+            this.vel.x *= -1
+        } else {
+            this.vel.x *= -1
+        }
+    }
+
     update(offsetX, offsetY) {
         this.acc.x = 0; this.acc.y = 0;
         this.acc.x += this.vel.x * FRICTION/3; this.acc.y += this.vel.y * FRICTION/3;
         this.vel.x += this.acc.x; this.vel.y += this.acc.y;
+        this.angle += getMagnitude(this.vel)/2
         super.update(offsetX, offsetY)
         this.timer++;
     }
 
+    draw() {
+        g.globalAlpha = 0.5
+        g.lineWidth = 3
+        g.lineCap = "round"
+        g.strokeStyle = "white"
+        g.beginPath();
+        g.moveTo(this.pos.x, this.pos.y);
+        g.lineTo(this.pos.x-this.vel.x*5, this.pos.y-this.vel.y*5);
+        g.stroke();
+        g.globalAlpha = 1.0
+        super.draw()
+    }
+
 }
                                                                             
+class ThrownWeapon extends Projectile {
+    constructor(imagePath, x, y, id, angle, speed, damage) {
+        super(imagePath, x, y, id, angle, speed, damage)
+        this.w = this.image.width;
+        this.h = this.image.height
+    }
+
+    update(offsetX, offsetY) {
+        this.angle += getMagnitude(this.vel)/2
+        super.update(offsetX, offsetY)
+    }
+}
+
+
+
+
 
 function explode(bullet, explosionForce) {
     for(let crateBlasted of crates) {
@@ -147,6 +193,17 @@ function explode(bullet, explosionForce) {
             let angle = Math.atan2(yDist, xDist)
             crateBlasted.vel.x += Math.cos(angle)*explosionForce*(2/3)
             crateBlasted.vel.y += Math.sin(angle)*explosionForce*(2/3)
+        }
+    }
+    for(let i = 0; i < explosiveBarrels.length; i++) {
+        let explosiveBarrelBlasted = explosiveBarrels[i]
+        if(getDist(explosiveBarrelBlasted, bullet) < 140) {
+            let xDist = explosiveBarrelBlasted.pos.x+explosiveBarrelBlasted.w/2-bullet.pos.x
+            let yDist = explosiveBarrelBlasted.pos.y+explosiveBarrelBlasted.h/2-bullet.pos.y
+            let angle = Math.atan2(yDist, xDist)
+            explosiveBarrelBlasted.vel.x += Math.cos(angle)*explosionForce*(1/3)
+            explosiveBarrelBlasted.vel.y += Math.sin(angle)*explosionForce*(1/3)
+            explosiveBarrelBlasted.startingExplosionTimer = true
         }
     }
     for(let playerBlasted of players) {

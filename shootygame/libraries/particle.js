@@ -15,7 +15,8 @@ function getDefaultParticleParam() {
         colors: ["white"],
         particleAmount: 5,
         continuous: true,
-        effectVel: {x: 0, y: 0}
+        effectVel: {x: 0, y: 0},
+        glowAmount: 0
     }
 }
 
@@ -86,6 +87,8 @@ class Particle {
         }
 
         this.opacity = 1.0
+
+        this.glowAmount = params.glowAmount
         
         let minAngle = params.angle-(params.effectWidth/2)
         let maxAngle = params.angle+(params.effectWidth/2)
@@ -130,6 +133,8 @@ class Particle {
 
         this.g.fillStyle = this.color;
         this.g.strokeStyle = this.color;
+        this.g.shadowBlur = this.glowAmount;
+        this.g.shadowColor = this.color;
 
         if(this.shape == "circle") {
             this.g.beginPath();
@@ -144,6 +149,7 @@ class Particle {
         }
 
         this.g.globalAlpha = 1.0
+        this.g.shadowBlur = 0;
 
         this.frame++;
     }

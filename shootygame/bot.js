@@ -68,9 +68,10 @@ function Bot(x, y, team, id) {
         if(this.heldGun.clip > 0 && this.heldGun.reloading == false && this.heldGun.canFire) {
 
             let firePoint = {
-                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*60),
-                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*60)
+                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*55),
+                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*55)
             }
+
             if(this.heldGun.name == "pistol") {
                 this.bullets.push(new Projectile(
                     "assets/projectiles/bullet.png", 
@@ -97,17 +98,39 @@ function Bot(x, y, team, id) {
                     }
                 }
             } else if(this.heldGun.name == "rocketlauncher") {
+                firePoint = {
+                    x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*100),
+                    y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*100)
+                }
                 this.bullets.push(new Projectile(
                     "assets/projectiles/rocket.png", 
                     firePoint.x, firePoint.y,
                     this.id, 
                     this.aimAngle, 
-                    12, 
+                    4, 
                     25
                 ))
                 this.vel.x -= this.bullets[this.bullets.length-1].vel.x/3
                 this.vel.y -= this.bullets[this.bullets.length-1].vel.y/3
+            } else if(this.heldGun.name == "grenadelauncher") {
+                firePoint = {
+                    x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*100),
+                    y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*100)
+                }
+                this.grenades.push(new Grenade(
+                    "assets/projectiles/grenade.png", 
+                    firePoint.x, 
+                    firePoint.y,
+                    this.id,
+                    this.aimAngle,
+                    30,
+                    5
+                ))
+                this.vel.x -= this.grenades[this.grenades.length-1].vel.x/4
+                this.vel.y -= this.grenades[this.grenades.length-1].vel.y/4
             }
+
+            particleEffects.push(new ParticleEffect(firePoint.x, firePoint.y, MUZZLEFLASHPARTICLES, g))
 
             this.heldGun.lastShot = this.heldGun.frame
 
@@ -119,6 +142,28 @@ function Bot(x, y, team, id) {
             this.heldGun.reloadStartFrame = this.heldGun.frame
         }
     }
+
+    this.throwWeapon = function() {
+
+        if(this.heldGun.name != "pistol") {
+            let firePoint = {
+                x: this.pos.x+(Math.cos(this.aimAngle*(Math.PI/180))*55),
+                y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*55)
+            }
+    
+            this.bullets.push(new ThrownWeapon(
+                this.heldGun.image.src,
+                firePoint.x, firePoint.y,
+                this.id,
+                this.aimAngle,
+                20,
+                50
+            ))
+    
+            this.heldGun = null
+        }
+    }
+
 
     this.throwGrenade = function() {
         if(this.grenadeCount > 0) {
@@ -226,7 +271,6 @@ function Bot(x, y, team, id) {
         if(newAimAngle < 0) {
             newAimAngle += 360
         } 
-        console.log(newAimAngle+" "+players[0].aimAngle)
         if(newAimAngle - this.aimAngle < 0 && newAimAngle - this.aimAngle < -trackingSpeed) {
             newAimAngle = this.aimAngle - trackingSpeed
         } else if(newAimAngle - this.aimAngle > 0 && newAimAngle - this.aimAngle > trackingSpeed) {
@@ -243,9 +287,21 @@ function Bot(x, y, team, id) {
 
     this.behave = function() {
         this.aim()
-        this.shoot()
+        // this.shoot()
         this.goTo(this.findNearest(players).pos)
-        this.avoid()
+        // this.avoid()
+    }
+
+    this.collisionReaction = function(collisionAngle) {
+        if(collisionAngle >= 45 && collisionAngle <= 135) {
+            this.vel.y *= -1
+        } else if(collisionAngle <= 315 && collisionAngle >= 225) {
+            this.vel.y *= -1
+        } else if(collisionAngle > 135 && collisionAngle < 225) {
+            this.vel.x *= -1
+        } else {
+            this.vel.x *= -1
+        }
     }
 
     this.update = function(offsetX, offsetY) {
@@ -283,7 +339,7 @@ function Bot(x, y, team, id) {
 
         //this.playerAngle = Math.atan2(this.vel.y, this.vel.x) * (180/Math.PI)
 
-        if(this.health < 0) {
+        if(this.health <= 0) {
             this.health = 0
             this.heldGun.carrier = null;
             this.heldGun = null;
@@ -343,7 +399,7 @@ function Bot(x, y, team, id) {
     this.drawHud = function() {
         g.globalAlpha = 0.6
         g.fillStyle = "black"
-        g.fillRect(-2+this.pos.x-this.maxHealth/3, -2+this.pos.y-40, 4+this.maxHealth/1.5, 4+10)
+        g.fillRect(this.pos.x-this.maxHealth/3, this.pos.y-40, this.maxHealth/1.5, 10)
         g.globalAlpha = 1.0
         g.fillStyle = "lime"
         g.fillRect(this.pos.x-this.maxHealth/3, this.pos.y-40, this.health/1.5, 10)

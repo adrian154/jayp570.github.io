@@ -40,6 +40,23 @@ function keyDownHandler(e) {
     if(code == 71) {
         player.throwGrenade()
     }
+
+    //throw weapon
+    if(code == 81) {
+        players[0].throwWeapon()
+    }
+
+
+
+
+
+    //testing
+    if(code == 57) {
+        crates.push(new Crate(cursorPos.x, cursorPos.y))
+    }
+    if(code == 48) {
+        explosiveBarrels.push(new ExplosiveBarrel(cursorPos.x, cursorPos.y))
+    }
 }
 
 function keyUpHandler(e) {

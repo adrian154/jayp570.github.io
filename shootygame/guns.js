@@ -54,4 +54,9 @@ const GUNINFO = {
         maxClip: 4,
         rateOfFire: 25
     },
+    "grenadelauncher": {
+        reloadSpeed: 150,
+        maxClip: 6,
+        rateOfFire: 30
+    },
 }
