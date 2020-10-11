@@ -204,6 +204,7 @@ function explode(bullet, explosionForce) {
             explosiveBarrelBlasted.vel.x += Math.cos(angle)*explosionForce*(1/3)
             explosiveBarrelBlasted.vel.y += Math.sin(angle)*explosionForce*(1/3)
             explosiveBarrelBlasted.startingExplosionTimer = true
+            explosiveBarrelBlasted.id = bullet.id
         }
     }
     for(let playerBlasted of players) {
@@ -211,6 +212,11 @@ function explode(bullet, explosionForce) {
             playerBlasted.health -= 50
             if(playerBlasted.id == bullet.id) {
                 playerBlasted.health+=20
+            } else {
+                if(playerBlasted.health <= 0) {
+                    addKillToPlayer(bullet.id);
+                }
+                
             }
             let xDist = playerBlasted.pos.x+playerBlasted.size/2-bullet.pos.x
             let yDist = playerBlasted.pos.y+playerBlasted.size/2-bullet.pos.y

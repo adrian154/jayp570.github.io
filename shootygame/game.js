@@ -9,8 +9,6 @@ let cursorPos = {x: 0, y: 0}
 let crosshairImage = new Image()
 crosshairImage.src = "assets/hud/crosshair.png"
 
-const TILESIZE = 125;
-
 const ACCELERATION = 0.85
 const FRICTION = -0.1 //-0.05
 
@@ -18,29 +16,7 @@ const DASHCOST = 30;
 
 const GUNNAMES = ["shotgun", "rocketlauncher", "grenadelauncher"]
 
-let rawMap = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0],
-    [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-]
-
+let showingLeaderboard = false;
 
 const EXPLOSIONPARTICLES =  {
     speed: [1, 10], 
@@ -72,6 +48,11 @@ const MUZZLEFLASHPARTICLES = {
 function Tile(x, y, state) {
 
     this.state = state
+    if(this.state == ".") {
+        this.state = 0
+    } else if(this.state = "o") {
+        this.state = 1
+    }
 
     this.pos = {
         x: x,
@@ -100,13 +81,18 @@ function Map(x, y, map) {
         y: y
     }
 
+    let mapRows = map.map.split("\n")
+    
+
     this.map = []
-    for(let i = 0; i < map.length; i++) {
+    let count = 0
+    for(let i = 0; i < map.height; i++) {
         this.map.push([])
-        for(let j = 0; j < map[i].length; j++) {
-            this.map[i].push(new Tile(this.pos.x+(j*TILESIZE), this.pos.y+(i*TILESIZE), map[i][j]))
+        for(let j = 0; j < map.width; j++) {
+            this.map[i].push(new Tile(x+(j*TILESIZE), y+(i*TILESIZE), mapRows[i][j]))
         }
     }
+    console.log(mapRows)
 
     this.h = this.map.length*TILESIZE
     this.w = this.map[0].length*TILESIZE
@@ -178,6 +164,9 @@ function Player(x, y, team) {
     }
 
     this.hitColor = "red"
+
+    this.kills = 0;
+    this.deaths = 0;
 
 
     this.setDirection = function(code,bool) {
@@ -401,7 +390,7 @@ function Player(x, y, team) {
         //this.playerAngle = Math.atan2(this.vel.y, this.vel.x) * (180/Math.PI)
 
         if(this.health <= 0) {
-            this.health = 0
+            this.deaths++;
             this.heldGun.carrier = null;
             this.heldGun = null;
             this.health = this.maxHealth
@@ -484,8 +473,9 @@ function Player(x, y, team) {
 }
 
 
-
-let map = new Map(0, 0, rawMap)
+const TILESIZE = 125; //125
+let map = new Map(0, 0, MAPS[0])
+const CRATESPAWNRATE = Math.round(map.w*map.h*0.016/TILESIZE/TILESIZE)
 
 let particleEffects = []
 
@@ -652,7 +642,8 @@ function animate() {
 
     //spawns crates periodically
     if(frame%1 == 0) {
-        if(crates.length < 6) {
+        console.log(CRATESPAWNRATE)
+        if(crates.length < CRATESPAWNRATE) {
             let crateSpawnX = getRandomNum(map.pos.x, map.pos.x+map.w-100)
             let crateSpawnY = getRandomNum(map.pos.y, map.pos.y+map.h-100)
             let crateSpawn = new Crate(crateSpawnX, crateSpawnY)
@@ -803,6 +794,7 @@ function animate() {
                         explode(bullet, 60)
                     }
                     explosiveBarrel.health = 0
+                    explosiveBarrel.id = bullet.id
                     player.bullets.splice(num, 1)
                 }
             }
@@ -816,6 +808,10 @@ function animate() {
                         if(bullet.name == "rocket") {
                             particleEffects.push(new ParticleEffect(bullet.pos.x, bullet.pos.y, EXPLOSIONPARTICLES, g))
                             explode(bullet, 60)
+                        } else {
+                            if(hitPlayer.health <= 0) {
+                                player.kills++;
+                            }
                         }
                         player.bullets.splice(num, 1)
                     }
@@ -910,6 +906,49 @@ function animate() {
 
         for(let player of players) {
             player.drawHud()
+        }
+
+        //draw leaderboard
+        if(showingLeaderboard) {
+            g.fillStyle = "black"
+            g.globalAlpha = 0.75
+            g.fillRect(25, 25, canvas.width-50, canvas.height-50)
+
+            g.fillStyle = "white"
+            g.globalAlpha = 1.0
+            g.font = "46px consolas"
+            g.fillText("LEADERBOARD", (canvas.width/2)-150, 100)
+
+            g.font = "26px consolas"
+            g.fillText("KILLS", 600, 150)
+            g.fillText("DEATHS", 800, 150)
+
+            let y = 160
+            for(let player of players) {
+                g.fillStyle = "black"
+                g.globalAlpha = 0.75
+                g.fillRect(200, y, canvas.width-400, 50)
+
+                g.fillStyle = player.hitColor
+                g.globalAlpha = 1.0
+                g.font = "24px consolas"
+                g.fillText(BOTNAMES[player.id], 210, y+35)
+                g.fillStyle = "white"
+                g.globalAlpha = 0.3
+                g.fillText(BOTNAMES[player.id], 210, y+35)
+
+                g.fillStyle = "white"
+                g.globalAlpha = 1.0
+                g.fillText(player.kills+"", 600, y+35)
+                g.fillText(player.deaths+"", 800, y+35)
+                
+
+                y+=60
+            }
+
+
+
+            g.globalAlpha = 1.0
         }
 
         //draws crosshair

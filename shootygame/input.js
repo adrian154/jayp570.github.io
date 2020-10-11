@@ -46,6 +46,11 @@ function keyDownHandler(e) {
         players[0].throwWeapon()
     }
 
+    //show leaderboard
+    if(code == 70) {
+        showingLeaderboard = true;
+    }
+
 
 
 
@@ -62,6 +67,11 @@ function keyDownHandler(e) {
 function keyUpHandler(e) {
     let code = e.keyCode;
     players[0].setDirection(code,false);
+
+    //hide leaderboard
+    if(code == 70) {
+        showingLeaderboard = false;
+    }
 }
 
 function mouseMoveHandler(e) {

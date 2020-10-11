@@ -33,3 +33,11 @@ function getCollisionAngle(objA, objB) {
     collisionAngle = Math.round(collisionAngle)
     return collisionAngle;  
 }
+
+function addKillToPlayer(id) {
+    for(let player of players) {
+        if(player.id == id)  {
+            player.kills++;
+        }
+    }
+}

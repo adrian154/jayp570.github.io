@@ -48,6 +48,10 @@ function Bot(x, y, team, id) {
 
     this.hitColor = this.team
 
+    this.kills = 0;
+    this.deaths = 0;
+
+
     this.checkCollision = function(object) {
         let bX = object.pos.x;
         let bY = object.pos.y;
@@ -340,7 +344,7 @@ function Bot(x, y, team, id) {
         //this.playerAngle = Math.atan2(this.vel.y, this.vel.x) * (180/Math.PI)
 
         if(this.health <= 0) {
-            this.health = 0
+            this.deaths++;
             this.heldGun.carrier = null;
             this.heldGun = null;
             this.health = this.maxHealth
@@ -404,4 +408,23 @@ function Bot(x, y, team, id) {
         g.fillStyle = "lime"
         g.fillRect(this.pos.x-this.maxHealth/3, this.pos.y-40, this.health/1.5, 10)
     }
+}
+
+
+
+
+
+
+
+
+
+
+const BOTNAMES = {
+    0: "YOU",
+    1: "ClearCrocodile",
+    2: "AmusingTiger",
+    3: "MagicalChicken",
+    4: "HystericalIbex",
+    5: "PeriodicAardvark",
+    6: "LumpyLizard",
 }
