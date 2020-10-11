@@ -70,7 +70,7 @@ function Tile(x, y, state) {
         } else {
             g.fillStyle = "#ccc"
         }
-        g.fillRect(this.pos.x, this.pos.y, this.w+1, this.h+1)
+        g.fillRect(this.pos.x, this.pos.y, this.w + 1, this.h + 1);
     }
 }
 
@@ -182,6 +182,7 @@ function Player(x, y, team) {
     }
 
     this.checkCollision = function(object) {
+        /*
         let bX = object.pos.x;
         let bY = object.pos.y;
         let bW = object.w;
@@ -194,6 +195,10 @@ function Player(x, y, team) {
             return true;
         }
         return false;
+        */
+        let distX = Math.abs(object.pos.x + object.w / 2 - this.pos.x);
+        let distY = Math.abs(object.pos.y + object.h / 2 - this.pos.y);
+        return distX <= this.size + object.w / 2 && distY <= this.size + object.h / 2;
     }
 
     this.shoot = function() {
