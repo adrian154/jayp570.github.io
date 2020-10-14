@@ -51,6 +51,13 @@ function Bot(x, y, team, id) {
     this.kills = 0;
     this.deaths = 0;
 
+    this.wallCollisions = 0;
+
+    this.target = map.map[5][8]
+    this.tile = map.map[0][0]
+    this.nextTile = null
+    this.crossedTiles = []
+
 
     this.checkCollision = function(object) {
         let bX = object.pos.x;
@@ -76,12 +83,14 @@ function Bot(x, y, team, id) {
                 y: this.pos.y+(Math.sin(this.aimAngle*(Math.PI/180))*55)
             }
 
+            let offset = getRandomNum(-10, 10)
+
             if(this.heldGun.name == "pistol") {
                 this.bullets.push(new Projectile(
                     "assets/projectiles/bullet.png", 
                     firePoint.x, firePoint.y,
                     this.id, 
-                    this.aimAngle, 
+                    this.aimAngle+offset, 
                     30, 
                     20
                 ))
@@ -187,16 +196,16 @@ function Bot(x, y, team, id) {
     this.dash = function() {
         if(this.dashMeter >= 50) {
             if(this.input.left) {
-                this.vel.x = -30
+                this.vel.x = -DASHFORCE
             }
             if(this.input.up) {
-                this.vel.y = -30
+                this.vel.y = -DASHFORCE
             }
             if(this.input.right) {
-                this.vel.x = 30
+                this.vel.x = DASHFORCE
             }
             if(this.input.down) {
-                this.vel.y = 30
+                this.vel.y = DASHFORCE
             }
             this.dashMeter-=DASHCOST
             if(this.dashMeter < 0) {
@@ -249,6 +258,27 @@ function Bot(x, y, team, id) {
         return target
     }
 
+    this.pathfindTo = function() {
+        let surroundingCoords = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+        let surroundingTiles = [];
+        for(let coord of surroundingCoords) {
+                try {
+                    if(map.map[this.tile.col+coord[0]][this.tile.row+coord[1]].state == 0 && this.crossedTiles.includes(map.map[this.tile.col+coord[0]][this.tile.row+coord[1]]) == false) {
+                        surroundingTiles.push(map.map[this.tile.col+coord[0]][this.tile.row+coord[1]])
+                    }
+                } catch (error) {
+                }
+        }
+        let nearestTile = surroundingTiles[0]
+        for(let tile of surroundingTiles) { 
+            if(getDistPos(this.target.getCenterPos(), tile.getCenterPos()) < getDistPos(this.target.getCenterPos(), nearestTile.getCenterPos())) {
+                nearestTile = tile
+            }
+        }
+        this.nextTile = nearestTile;
+        
+    }
+
     this.goTo = function(pos) {
 
         let targetPos = pos
@@ -291,9 +321,28 @@ function Bot(x, y, team, id) {
 
     this.behave = function() {
         this.aim()
-        // this.shoot()
-        // this.goTo(this.findNearest(players).pos)
-        // this.avoid()
+        this.shoot()
+        let nextTarget = getTileOf(this.findNearest(players))
+        if(this.target != nextTarget) {
+            this.crossedTiles = []
+            this.target = nextTarget
+        }
+        this.pathfindTo()
+        this.goTo(this.nextTile.getCenterPos())
+        this.avoid()
+
+        for(let i = 0; i < map.map.length; i++) {
+            for(let j = 0; j < map.map[i].length; j++) {
+                if(map.map[i][j].state == 0) {
+                    if(this.checkCollision(map.map[i][j])) {
+                        if(this.crossedTiles.includes(map.map[i][j]) == false && this.target != map.map[i][j]) {
+                            this.tile = map.map[i][j]
+                            this.crossedTiles.push(map.map[i][j])
+                        }
+                    }
+                }
+            }
+        }
     }
 
     this.collisionReaction = function(collisionAngle) {
@@ -359,8 +408,8 @@ function Bot(x, y, team, id) {
                 size: [15, 25]
             }, g))
             //respawn
-            let respawnX = 500; let respawnY = 100;
-            this.pos.x -= this.posOnMap.x - respawnX; this.pos.y -= this.posOnMap.y - respawnY; 
+            let respawnPos = getRandomSpawnPos(map)
+            this.pos.x -= this.posOnMap.x - respawnPos.x-map.pos.x; this.pos.y -= this.posOnMap.y - respawnPos.y-map.pos.y; 
             this.vel = {x: 0, y: 0}
         }
 
@@ -368,6 +417,8 @@ function Bot(x, y, team, id) {
         if(this.dashMeter > this.maxDashMeter) {
             this.dashMeter = this.maxDashMeter
         }
+
+        this.wallCollisions = 0
     }
 
     this.updateItems = function() {
@@ -398,6 +449,9 @@ function Bot(x, y, team, id) {
         if(this.heldGun != null) {
             this.heldGun.draw()
         }
+
+        g.fillStyle = "yellow"
+        //g.fillRect(this.nextTile.pos.x, this.nextTile.pos.y, TILESIZE, TILESIZE)
     }
 
     this.drawHud = function() {

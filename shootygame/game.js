@@ -9,43 +9,12 @@ let cursorPos = {x: 0, y: 0}
 let crosshairImage = new Image()
 crosshairImage.src = "assets/hud/crosshair.png"
 
-const ACCELERATION = 0.85
-const FRICTION = -0.1 //-0.05
-
-const DASHCOST = 30;
-
 const GUNNAMES = ["shotgun", "rocketlauncher", "grenadelauncher"]
 
 let showingLeaderboard = false;
 
-const EXPLOSIONPARTICLES =  {
-    speed: [1, 10], 
-    size: [1, 70],
-    shapes: ["circle"],
-    effectWidth: 360,
-    destroyTime: [5, 15],
-    fadeOut: 0,
-    shrink: 6,
-    angle: 90,
-    colors: ["yellow", "darkorange", "orange", "gray", "darkgray", "red"],
-    particleAmount: 100,
-    continuous: false,
-    effectVel: {x: 0, y: 0},
-    glowAmount: 20
-}
 
-const MUZZLEFLASHPARTICLES = {
-    destroyTime: [0, 0],
-    effectWidth: 360,
-    continuous: false,
-    speed: [0, 5],
-    particleAmount: 20,
-    shrink: 3,
-    colors: ["yellow", "orange", "gold"],
-    glowAmount: 10
-}
-
-function Tile(x, y, state) {
+function Tile(x, y, state, col, row) {
 
     this.state = state
     if(this.state == ".") {
@@ -59,6 +28,9 @@ function Tile(x, y, state) {
         y: y
     }
 
+    this.row = row
+    this.col = col
+
     this.w = TILESIZE
     this.h = TILESIZE
 
@@ -70,7 +42,11 @@ function Tile(x, y, state) {
         } else {
             g.fillStyle = "#ccc"
         }
-        g.fillRect(this.pos.x, this.pos.y, this.w + 1, this.h + 1);
+        g.fillRect(this.pos.x, this.pos.y, this.w+1, this.h+1)
+    }
+
+    this.getCenterPos = function() {
+        return {x: this.pos.x + this.w/2, y: this.pos.y + this.h/2}
     }
 }
 
@@ -89,10 +65,9 @@ function Map(x, y, map) {
     for(let i = 0; i < map.height; i++) {
         this.map.push([])
         for(let j = 0; j < map.width; j++) {
-            this.map[i].push(new Tile(x+(j*TILESIZE), y+(i*TILESIZE), mapRows[i][j]))
+            this.map[i].push(new Tile(x+(j*TILESIZE), y+(i*TILESIZE), mapRows[i][j], i, j))
         }
     }
-    console.log(mapRows)
 
     this.h = this.map.length*TILESIZE
     this.w = this.map[0].length*TILESIZE
@@ -166,7 +141,9 @@ function Player(x, y, team) {
     this.hitColor = "red"
 
     this.kills = 0;
-    this.deaths = 0;
+    this.deaths = -1;
+
+    this.wallCollisions = 0;
 
 
     this.setDirection = function(code,bool) {
@@ -182,7 +159,6 @@ function Player(x, y, team) {
     }
 
     this.checkCollision = function(object) {
-        /*
         let bX = object.pos.x;
         let bY = object.pos.y;
         let bW = object.w;
@@ -195,10 +171,6 @@ function Player(x, y, team) {
             return true;
         }
         return false;
-        */
-        let distX = Math.abs(object.pos.x + object.w / 2 - this.pos.x);
-        let distY = Math.abs(object.pos.y + object.h / 2 - this.pos.y);
-        return distX <= this.size + object.w / 2 && distY <= this.size + object.h / 2;
     }
 
     this.shoot = function() {
@@ -320,16 +292,16 @@ function Player(x, y, team) {
     this.dash = function() {
         if(this.dashMeter >= 50) {
             if(this.input.left) {
-                this.vel.x = -30
+                this.vel.x = -DASHFORCE
             }
             if(this.input.up) {
-                this.vel.y = -30
+                this.vel.y = -DASHFORCE
             }
             if(this.input.right) {
-                this.vel.x = 30
+                this.vel.x = DASHFORCE
             }
             if(this.input.down) {
-                this.vel.y = 30
+                this.vel.y = DASHFORCE
             }
             this.dashMeter-=DASHCOST
             if(this.dashMeter < 0) {
@@ -400,16 +372,20 @@ function Player(x, y, team) {
             this.heldGun = null;
             this.health = this.maxHealth
             this.dashMeter = this.maxDashMeter
-            particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
-                continuous: false,
-                particleAmount: 100,
-                effectWidth: 360,
-                colors: [this.hitColor],
-                destroyTime: [0, 0],
-                speed: [15, 20],
-                size: [15, 25]
-            }, g))
-            playerRespawn(this.posOnMap.x, this.posOnMap.y, 300, 100)
+            //fixes player dying to spawn randomly in the beginning causing particles
+            if(frame > 0) {
+                particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
+                    continuous: false,
+                    particleAmount: 50,
+                    effectWidth: 360,
+                    colors: [this.hitColor],
+                    destroyTime: [0, 0],
+                    speed: [15, 20],
+                    size: [15, 25]
+                }, g))
+            }
+            let respawnPos = getRandomSpawnPos(map)
+            playerRespawn(this.posOnMap.x, this.posOnMap.y, respawnPos.x-map.pos.x, respawnPos.y-map.pos.y)
             this.vel = {x: 0, y: 0}
         }
 
@@ -417,6 +393,8 @@ function Player(x, y, team) {
         if(this.dashMeter > this.maxDashMeter) {
             this.dashMeter = this.maxDashMeter
         }
+
+        this.wallCollisions = 0
     }
 
     this.updateItems = function() {
@@ -478,20 +456,25 @@ function Player(x, y, team) {
 }
 
 
-const TILESIZE = 125; //125
+
+
 let map = new Map(0, 0, MAPS[0])
 const CRATESPAWNRATE = Math.round(map.w*map.h*0.016/TILESIZE/TILESIZE)
 
 let particleEffects = []
+let colors = ["red", "yellow", "orange", "lime", "blue", "purple"]
 
-let players = [
-    new Player(canvas.width/2, canvas.height/2, "red"),
-    new Bot(1000, 100, "blue", 1),
-    // new Bot(1000, 300, "yellow", 2),
-    // new Bot(700, 100, "green", 3),
-    // new Bot(900, 300, "purple", 4),
-    // new Bot(1000, 400, "white", 6),
-]
+let players = []
+for(let i = 0; i < 6; i++) {
+    spawnPos = getRandomSpawnPos(map)
+    if(i == 0) {
+        players.push(new Player(canvas.width/2, canvas.width/2, colors[i]))
+    } else {
+        players.push(new Bot(spawnPos.x, spawnPos.y, colors[i], i))
+    }
+}
+
+players[0].health = 0
 
 let items = []
 
@@ -647,44 +630,23 @@ function animate() {
 
     //spawns crates periodically
     if(frame%1 == 0) {
-        console.log(CRATESPAWNRATE)
         if(crates.length < CRATESPAWNRATE) {
-            let crateSpawnX = getRandomNum(map.pos.x, map.pos.x+map.w-100)
-            let crateSpawnY = getRandomNum(map.pos.y, map.pos.y+map.h-100)
-            let crateSpawn = new Crate(crateSpawnX, crateSpawnY)
-            let inWall = false
-            for(let i = 0; i < map.map.length; i++) {
-                for(let j = 0; j < map.map[i].length; j++) {
-                    if(map.map[i][j].state == 1) {
-                        if(crateSpawn.checkCollision(map.map[i][j])) {
-                            inWall = true
-                        }
-                    }
-                }
-            }
-            while(inWall == true) {
-                crateSpawnX = getRandomNum(map.pos.x, map.pos.x+map.w-100)
-                crateSpawnY = getRandomNum(map.pos.y, map.pos.y+map.h-100)
-                crateSpawn = new Crate(crateSpawnX, crateSpawnY)
-                inWall = false
-                for(let i = 0; i < map.map.length; i++) {
-                    for(let j = 0; j < map.map[i].length; j++) {
-                        if(map.map[i][j].state == 1) {
-                            if(crateSpawn.checkCollision(map.map[i][j])) {
-                                inWall = true
-                            }
-                        }
-                    }
-                }
-            }
-            crates.push(crateSpawn)
+            let crateSpawnPos = getRandomSpawnPos(map)
+            crates.push(new Crate(crateSpawnPos.x, crateSpawnPos.y))
         }
     }
 
-    //updates items of player (grenades, bullets, guns)
+    //updates items of player (grenades, bullets, guns) and deletes stray bullets
     for(let player of players) {
         player.updateItems()
     }
+    let totalBulletCount = 0
+    for(let player of players) {
+        for(let i = 0; i < player.bullets.length; i++) {
+            totalBulletCount++;
+        }
+    }
+    console.log(totalBulletCount)
 
     //updates player and bots
     for(let player of players) {
@@ -722,10 +684,11 @@ function animate() {
         outerWallLoop:
         for(let i = 0; i < map.map.length; i++) {
             for(let j = 0; j < map.map[i].length; j++) {
-                if(map.map[i][j].state == 1) {
+                if(map.map[i][j].state == 1 && player.wallCollisions <= 1) {
                     if(player.checkCollision(map.map[i][j])) {
                         let collisionAngle = getCollisionAngle(map.map[i][j], player)
                         player.collisionReaction(collisionAngle)
+                        player.wallCollisions++;
                         break outerWallLoop;
                     }
                 }
@@ -860,6 +823,13 @@ function animate() {
                     grenade.collisionReaction(collisionAngle)
                 }
             }
+        }
+    }
+
+    //deletes unused particles
+    for(let i = 0; i < particleEffects.length; i++) {
+        if(particleEffects[i].particles.length == 0) {
+            particleEffects.splice(i, 1)
         }
     }
 

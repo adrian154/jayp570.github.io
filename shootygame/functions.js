@@ -41,3 +41,39 @@ function addKillToPlayer(id) {
         }
     }
 }
+
+function getTileOf(obj) {
+    let tile = map.map[0][0]
+    for(let i = 0; i < map.map.length; i++) {
+        for(let j = 0; j < map.map[i].length; j++) {
+            if(getDistPos(obj.pos, map.map[i][j].getCenterPos()) < getDistPos(obj.pos, tile.getCenterPos())) {
+                tile = map.map[i][j]
+            }
+        }
+    }
+    return tile
+}
+
+function getRandomSpawnPos(map) {
+    let validPos = false;
+    let x = null
+    let y = null
+    while(validPos == false) {
+        x = getRandomNum(map.pos.x, map.pos.x+map.w-100)
+        y = getRandomNum(map.pos.y, map.pos.y+map.h-100)
+        for(let i = 0; i < map.map.length; i++) {
+            for(let j = 0; j < map.map[i].length; j++) {
+                mapTile = map.map[i][j]
+                if(x < mapTile.pos.x+mapTile.w && x > mapTile.pos.x && y < mapTile.pos.y+mapTile.h && y > mapTile.pos.y) {
+                    tile = map.map[i][j]
+                } 
+            }
+        }
+        if(tile.state == 0) {
+            validPos = true
+        } else {
+            validPos = false
+        }
+    }
+    return {x: x, y: y}
+}
