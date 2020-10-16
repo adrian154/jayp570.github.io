@@ -1,7 +1,7 @@
 let canvas = document.querySelector("canvas");
 
-canvas.width = 1280;
-canvas.height = 720;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 let g = canvas.getContext("2d");
 
@@ -646,7 +646,6 @@ function animate() {
             totalBulletCount++;
         }
     }
-    console.log(totalBulletCount)
 
     //updates player and bots
     for(let player of players) {
