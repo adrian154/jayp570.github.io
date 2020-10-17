@@ -38,7 +38,7 @@ class Projectile {
         }
     }
 
-    checkCollision(object) {
+    checkCollision(object, noparticle) {
         let bX = object.pos.x;
         let bY = object.pos.y;
         let bW = object.w;
@@ -48,15 +48,17 @@ class Projectile {
         let w = this.w;
         let h = this.h;
         if(x < bX+bW && x+w > bX && y < bY+bH && y+h > bY) {
-            particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
-                angle: this.angle,
-                continuous: false,
-                effectWidth: 100,
-                particleAmount: Math.round(getMagnitude(this.vel))/3,
-                size: [5, 15],
-                destroyTime: [0, 5],
-                colors: [object.hitColor] 
-            }, g))
+            if(!noparticle) {
+                particleEffects.push(new ParticleEffect(this.pos.x, this.pos.y, {
+                    angle: this.angle,
+                    continuous: false,
+                    effectWidth: 100,
+                    particleAmount: Math.round(getMagnitude(this.vel))/3,
+                    size: [5, 15],
+                    destroyTime: [0, 5],
+                    colors: [object.hitColor] 
+                }, g))
+            }
             return true;
         }
         return false;

@@ -13,7 +13,6 @@ const GUNNAMES = ["shotgun", "rocketlauncher", "grenadelauncher"]
 
 let showingLeaderboard = false;
 
-
 function Tile(x, y, state, col, row) {
 
     this.state = state
@@ -640,12 +639,6 @@ function animate() {
     for(let player of players) {
         player.updateItems()
     }
-    let totalBulletCount = 0
-    for(let player of players) {
-        for(let i = 0; i < player.bullets.length; i++) {
-            totalBulletCount++;
-        }
-    }
 
     //updates player and bots
     for(let player of players) {
@@ -784,6 +777,12 @@ function animate() {
                     }
                 }
             }
+
+            // check if out of bound
+            if(!bullet.checkCollision(map, true)) {
+                player.bullets.splice(num, 1);
+            }
+
         }
 
         //checks grenade collision
@@ -862,7 +861,7 @@ function animate() {
         }
 
         //displays pick up prompt
-        if(players[0].heldGun.name == "pistol") {
+        if(players[0] && players[0].heldGun.name == "pistol") {
             for(let item of items) {
                 if(item.carrier == null) {
                     if(getDist(players[0], item) < 110) {
